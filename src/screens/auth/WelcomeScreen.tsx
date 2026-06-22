@@ -71,7 +71,7 @@ export const WelcomeScreen: React.FC = () => {
     <View style={styles.mainContainer}>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: scale(20),
     paddingTop: isSmall ? 10 : 20,
-    paddingBottom: scale(20),
+    paddingBottom: 0,
   },
 
   /* ── Top Section ── */
@@ -312,17 +312,7 @@ const styles = StyleSheet.create({
     marginBottom: scale(12),
     flexDirection: "row",
     alignItems: "center",
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
+    elevation: 6,
   },
   iconCircle: {
     width: scale(32),
@@ -352,7 +342,7 @@ const styles = StyleSheet.create({
   buttonContainer: {
     width: "100%",
     gap: 10, // Compacted
-    paddingBottom: scale(10),
+    paddingBottom: 0,
     zIndex: 1,
   },
   primaryBtn: {

@@ -55,17 +55,17 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
 
   // Keyboard Height State
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const scrollViewRef = React.useRef<ScrollView>(null);
 
   // Native Keyboard Listeners for flawless scrolling
   useEffect(() => {
-    const showSub = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      (e) => setKeyboardHeight(e.endCoordinates.height)
-    );
-    const hideSub = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      () => setKeyboardHeight(0)
-    );
+    const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    });
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => setKeyboardHeight(0));
 
     return () => {
       showSub.remove();
@@ -240,6 +240,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
 
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
           <ScrollView
+            ref={scrollViewRef}
             contentContainerStyle={[styles.scrollContent, { paddingBottom: keyboardHeight }]}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
@@ -442,9 +443,9 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "flex-start",
     paddingHorizontal: isSmall ? 16 : 24,
-    paddingTop: isSmall ? 10 : 20,
+    paddingTop: isSmall ? 5 : 10,
     paddingBottom: 0,
   },
 
@@ -542,17 +543,11 @@ const styles = StyleSheet.create({
     paddingVertical: isSmall ? 16 : 22,
     marginBottom: scale(12),
     zIndex: 1,
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 8,
   },
   inputGroup: {
     marginBottom: scale(12),
@@ -674,17 +669,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.darkBlue,
     borderRadius: scale(10),
     height: isSmall ? 42 : 48, // Compacted
-    ...Platform.select({
-      ios: {
-        shadowColor: COLORS.darkBlue,
-        shadowOffset: { width: 0, height: scale(4) },
-        shadowOpacity: 0.2,
-        shadowRadius: 6,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
+    elevation: 4,
   },
   primaryBtnText: {
     color: COLORS.white,
