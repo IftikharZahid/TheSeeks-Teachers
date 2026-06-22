@@ -47,15 +47,15 @@ export const TeacherAssignmentsScreen: React.FC = () => {
   useFocusEffect(
     React.useCallback(() => {
       if (!teacherName) return;
-      
+
       const unsubscribe = onSnapshot(doc(db, 'appSettings', 'classes'), (snap) => {
         if (snap.exists() && snap.data().list) {
           dispatch(setAvailableClasses(snap.data().list));
         }
       });
-      
+
       dispatch(fetchTeacherAssignments({ teacherName }));
-      
+
       return () => unsubscribe();
     }, [teacherName, dispatch])
   );
@@ -190,7 +190,8 @@ export const TeacherAssignmentsScreen: React.FC = () => {
       <Modal visible={showModal} transparent animationType="slide" onRequestClose={() => setShowModal(false)} statusBarTranslucent={true}>
         <View style={styles.modalOverlay}>
           <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            behavior="height"
+            keyboardVerticalOffset={0}
             style={{ width: '100%', maxHeight: '90%', flexShrink: 1 }}
           >
             <View style={[styles.modalContent, { backgroundColor: theme.card }]}>
@@ -201,7 +202,12 @@ export const TeacherAssignmentsScreen: React.FC = () => {
                 </TouchableOpacity>
               </View>
 
-              <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+              <ScrollView
+                style={styles.modalBody}
+                contentContainerStyle={{ paddingBottom: scale(20) }}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+              >
                 <Text style={[styles.label, { color: theme.textSecondary }]}>Title *</Text>
                 <TextInput
                   style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: isDark ? '#334155' : '#f8fafc' }]}
@@ -226,43 +232,43 @@ export const TeacherAssignmentsScreen: React.FC = () => {
                     </TouchableOpacity>
 
                     {showClassDropdown && availableClasses.length > 0 && (
-                    <View style={[styles.dropdownContainer, { backgroundColor: theme.card, borderColor: theme.border }]}>
-                      <ScrollView style={{ maxHeight: scale(300) }} nestedScrollEnabled={true} showsVerticalScrollIndicator={true} keyboardShouldPersistTaps="handled">
-                        {[...availableClasses].sort((a, b) => {
-                          const getWeight = (cls: string) => {
-                            const lower = cls.toLowerCase();
-                            if (lower.includes('1st year')) return 11;
-                            if (lower.includes('2nd year')) return 12;
-                            if (lower.includes('prep')) return 0;
-                            if (lower.includes('nursery')) return -1;
-                            const match = cls.match(/(\d+)/);
-                            if (match) return parseInt(match[1], 10);
-                            return 99; // unknown at the end
-                          };
-                          return getWeight(a) - getWeight(b);
-                        }).map((cls, index, sortedArr) => {
-                          const isSelected = formData.targetClass === cls;
-                          return (
-                            <TouchableOpacity 
-                              key={index} 
-                              style={[
-                                styles.dropdownItem, 
-                                { borderBottomColor: theme.border, borderBottomWidth: index === sortedArr.length - 1 ? 0 : 1 },
-                                isSelected && { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)' }
-                              ]}
-                              onPress={() => {
-                                setFormData({ ...formData, targetClass: cls });
-                                setShowClassDropdown(false);
-                              }}
-                            >
-                              <Text style={{ color: isSelected ? theme.primary : theme.text, fontSize: scale(14), fontWeight: isSelected ? '600' : '400' }}>{cls}</Text>
-                              {isSelected && <Ionicons name="checkmark-circle" size={18} color={theme.primary} />}
-                            </TouchableOpacity>
-                          )
-                        })}
-                      </ScrollView>
-                    </View>
-                  )}
+                      <View style={[styles.dropdownContainer, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                        <ScrollView style={{ maxHeight: scale(300) }} nestedScrollEnabled={true} showsVerticalScrollIndicator={true} keyboardShouldPersistTaps="handled">
+                          {[...availableClasses].sort((a, b) => {
+                            const getWeight = (cls: string) => {
+                              const lower = cls.toLowerCase();
+                              if (lower.includes('1st year')) return 11;
+                              if (lower.includes('2nd year')) return 12;
+                              if (lower.includes('prep')) return 0;
+                              if (lower.includes('nursery')) return -1;
+                              const match = cls.match(/(\d+)/);
+                              if (match) return parseInt(match[1], 10);
+                              return 99; // unknown at the end
+                            };
+                            return getWeight(a) - getWeight(b);
+                          }).map((cls, index, sortedArr) => {
+                            const isSelected = formData.targetClass === cls;
+                            return (
+                              <TouchableOpacity
+                                key={index}
+                                style={[
+                                  styles.dropdownItem,
+                                  { borderBottomColor: theme.border, borderBottomWidth: index === sortedArr.length - 1 ? 0 : 1 },
+                                  isSelected && { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)' }
+                                ]}
+                                onPress={() => {
+                                  setFormData({ ...formData, targetClass: cls });
+                                  setShowClassDropdown(false);
+                                }}
+                              >
+                                <Text style={{ color: isSelected ? theme.primary : theme.text, fontSize: scale(14), fontWeight: isSelected ? '600' : '400' }}>{cls}</Text>
+                                {isSelected && <Ionicons name="checkmark-circle" size={18} color={theme.primary} />}
+                              </TouchableOpacity>
+                            )
+                          })}
+                        </ScrollView>
+                      </View>
+                    )}
                   </View>
 
                   <View style={{ flex: 1 }}>
@@ -279,29 +285,29 @@ export const TeacherAssignmentsScreen: React.FC = () => {
                     </TouchableOpacity>
 
                     {showAudienceDropdown && (
-                    <View style={[styles.dropdownContainer, { backgroundColor: theme.card, borderColor: theme.border }]}>
-                      {['Both', 'Boys', 'Girls'].map((opt, index) => {
-                        const isSelected = formData.audience === opt;
-                        return (
-                          <TouchableOpacity 
-                            key={opt} 
-                            style={[
-                              styles.dropdownItem, 
-                              { borderBottomColor: theme.border, borderBottomWidth: index === 2 ? 0 : 1 },
-                              isSelected && { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)' }
-                            ]}
-                            onPress={() => {
-                              setFormData({ ...formData, audience: opt });
-                              setShowAudienceDropdown(false);
-                            }}
-                          >
-                            <Text style={{ color: isSelected ? theme.primary : theme.text, fontSize: scale(14), fontWeight: isSelected ? '600' : '400' }}>{opt}</Text>
-                            {isSelected && <Ionicons name="checkmark-circle" size={18} color={theme.primary} />}
-                          </TouchableOpacity>
-                        )
-                      })}
-                    </View>
-                  )}
+                      <View style={[styles.dropdownContainer, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                        {['Both', 'Boys', 'Girls'].map((opt, index) => {
+                          const isSelected = formData.audience === opt;
+                          return (
+                            <TouchableOpacity
+                              key={opt}
+                              style={[
+                                styles.dropdownItem,
+                                { borderBottomColor: theme.border, borderBottomWidth: index === 2 ? 0 : 1 },
+                                isSelected && { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)' }
+                              ]}
+                              onPress={() => {
+                                setFormData({ ...formData, audience: opt });
+                                setShowAudienceDropdown(false);
+                              }}
+                            >
+                              <Text style={{ color: isSelected ? theme.primary : theme.text, fontSize: scale(14), fontWeight: isSelected ? '600' : '400' }}>{opt}</Text>
+                              {isSelected && <Ionicons name="checkmark-circle" size={18} color={theme.primary} />}
+                            </TouchableOpacity>
+                          )
+                        })}
+                      </View>
+                    )}
                   </View>
                 </View>
 
@@ -325,10 +331,10 @@ export const TeacherAssignmentsScreen: React.FC = () => {
                           {teacherSubjectsList.map((subj: string, index: number) => {
                             const isSelected = formData.subject === subj;
                             return (
-                              <TouchableOpacity 
-                                key={index} 
+                              <TouchableOpacity
+                                key={index}
                                 style={[
-                                  styles.dropdownItem, 
+                                  styles.dropdownItem,
                                   { borderBottomColor: theme.border, borderBottomWidth: index === teacherSubjectsList.length - 1 ? 0 : 1 },
                                   isSelected && { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)' }
                                 ]}
@@ -386,9 +392,7 @@ export const TeacherAssignmentsScreen: React.FC = () => {
                   value={formData.description}
                   onChangeText={t => setFormData({ ...formData, description: t })}
                 />
-              </ScrollView>
 
-              <View style={[styles.modalFooter, { borderTopColor: theme.border, paddingBottom: 0 }]}>
                 <TouchableOpacity
                   style={[styles.saveBtn, { backgroundColor: theme.primary, opacity: saving ? 0.7 : 1 }]}
                   onPress={handleSave}
@@ -396,7 +400,7 @@ export const TeacherAssignmentsScreen: React.FC = () => {
                 >
                   {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>Save Assignment</Text>}
                 </TouchableOpacity>
-              </View>
+              </ScrollView>
             </View>
           </KeyboardAvoidingView>
         </View>
@@ -466,7 +470,6 @@ const styles = StyleSheet.create({
   closeBtn: { padding: scale(4) },
   modalBody: {
     paddingHorizontal: scale(20),
-    paddingBottom: scale(20),
     flexShrink: 1,
   },
   label: { fontSize: scale(12), fontWeight: '600', marginBottom: scale(6) },
@@ -503,17 +506,11 @@ const styles = StyleSheet.create({
   textArea: {
     height: scale(100),
   },
-  modalFooter: {
-    paddingHorizontal: scale(20),
-    paddingTop: scale(12),
-    borderTopWidth: 1,
-  },
   saveBtn: {
     paddingVertical: scale(14),
     borderRadius: scale(10),
     alignItems: 'center',
-    marginBottom: scale(20),
-
+    marginTop: scale(15)
   },
   saveBtnText: {
     color: '#fff',

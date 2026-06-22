@@ -19,7 +19,7 @@ import { AdminStudentRecordsScreen } from "../screens/users/StudentRecordsScreen
 import { AdminFeeScreen } from "../screens/finance/FeeScreen";
 
 import { AdminAttendanceScreen } from "../screens/academics/AttendanceScreen";
-import { StudentProfile } from "../screens/users/StudentProfile";
+import { StudentProfile } from "../screens/users/TeacherProfile";
 
 import { HelpCenterScreen } from "../screens/settings/HelpCenterScreen";
 import { AboutScreen } from "../screens/settings/AboutScreen";

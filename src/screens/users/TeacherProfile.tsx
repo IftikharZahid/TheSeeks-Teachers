@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Image,
-  TouchableOpacity, SafeAreaView, Platform, StatusBar
+  TouchableOpacity, Platform, StatusBar
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
@@ -101,7 +102,7 @@ export const StudentProfile: React.FC = () => {
           <View style={styles.activeDot} />
         </View>
 
-        <Text style={styles.heroName}>{student.name || 'Unknown Student'}</Text>
+        <Text style={styles.heroName}>{student.name || 'Teacher'}</Text>
 
         {/* Info pills */}
         <View style={styles.heroMeta}>

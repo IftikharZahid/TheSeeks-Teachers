@@ -21,7 +21,7 @@ import appSettingsReducer from './slices/appSettingsSlice';
 const persistConfig = {
     key: 'root',
     storage: AsyncStorage,
-    whitelist: ['auth', 'videos', 'theme', 'admin'], // Only persist these slices
+    whitelist: ['auth', 'videos', 'theme', 'admin', 'notifications'], // Only persist these slices
 };
 
 const rootReducer = combineReducers({

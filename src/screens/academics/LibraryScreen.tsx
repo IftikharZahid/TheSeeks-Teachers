@@ -1,6 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, ScrollView, Modal, Dimensions, Linking, Image, KeyboardAvoidingView, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useState } from 'react';
+import {
+  View, Text, StyleSheet, FlatList, TouchableOpacity,
+  TextInput, ScrollView, Modal, Dimensions, Linking,
+  KeyboardAvoidingView, Platform, StatusBar,
+} from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useAppSelector, useAppDispatch } from '../../store/hooks';
 import { useTheme } from '../../context/ThemeContext';
@@ -9,559 +13,715 @@ import { scale } from '../../utils/responsive';
 import { markAsRead } from '../../store/slices/notificationsSlice';
 import type { Notice } from '../../store/slices/notificationsSlice';
 
-const { width, height } = Dimensions.get('window');
+const { height } = Dimensions.get('window');
 
-const StatCard = ({ iconName, iconColor, value, label, theme, isDark }: any) => (
-  <View style={[styles.statCard, { backgroundColor: theme.card, borderColor: theme.border, shadowOpacity: isDark ? 0.3 : 0.05 }]}>
-    <View style={[styles.statIconWrapper, { backgroundColor: isDark ? iconColor + '30' : iconColor + '15' }]}>
-      <Ionicons name={iconName} size={scale(24)} color={iconColor} />
-    </View>
-    <View>
-      <Text style={[styles.statValue, { color: theme.text }]}>{value}</Text>
-      <Text style={[styles.statLabel, { color: theme.placeholder }]}>{label}</Text>
-    </View>
-  </View>
-);
-
-const DropdownBtn = ({ label, hasIcon = true, onPress, theme }: any) => (
-  <TouchableOpacity style={[styles.dropdownBtn, { backgroundColor: theme.card, borderColor: theme.border }]} onPress={onPress}>
-    {label === 'Sort' && <Ionicons name="options-outline" size={scale(14)} color={theme.placeholder} style={{ marginRight: 4 }} />}
-    <Text style={[styles.dropdownLabel, { color: theme.text }]}>{label}</Text>
-    {hasIcon && <Ionicons name="chevron-down" size={scale(14)} color={theme.placeholder} />}
-  </TouchableOpacity>
-);
-
-const Chip = ({ label, iconName, color, isActive, onPress, theme, isDark }: any) => (
-  <TouchableOpacity onPress={onPress} style={[
-    styles.chip,
-    isActive ? { backgroundColor: '#1d4ed8', borderColor: '#1d4ed8' } : { borderColor: isDark ? theme.border : color + '40', backgroundColor: theme.card }
-  ]}>
-    {iconName && <Ionicons name={iconName} size={scale(14)} color={isActive ? '#fff' : (isDark ? theme.placeholder : color)} style={{ marginRight: scale(4) }} />}
-    <Text style={[styles.chipText, { color: isActive ? '#fff' : (isDark ? theme.text : color) }]}>{label}</Text>
-  </TouchableOpacity>
-);
-
+/* ─── Rich-text renderer (markdown subset) ─── */
 const renderRichText = (text: string, theme: any, isDark: boolean) => {
-    if (!text) return null;
-    let escaped = text.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#039;/g, "'");
-    const lines = escaped.split('\n');
-    
-    return lines.map((line, lineIdx) => {
-        let trimmed = line.trim();
-        if (!trimmed) return <View key={lineIdx} style={{ height: scale(8) }} />;
-        
-        let isH1 = trimmed.startsWith('# ');
-        let isH2 = trimmed.startsWith('## ');
-        let isH3 = trimmed.startsWith('### ');
-        let isBullet = trimmed.startsWith('- ') || trimmed.startsWith('* ');
-        
-        let content = trimmed;
-        if (isH1) content = trimmed.substring(2);
-        else if (isH2) content = trimmed.substring(3);
-        else if (isH3) content = trimmed.substring(4);
-        else if (isBullet) content = trimmed.substring(2);
-        
-        let baseStyle: any = { fontSize: scale(13), color: theme.text, lineHeight: scale(20) };
-        if (isH1) baseStyle = { fontSize: scale(18), fontWeight: 'bold', color: theme.text, marginTop: scale(12), marginBottom: scale(4) };
-        if (isH2) baseStyle = { fontSize: scale(16), fontWeight: 'bold', color: theme.text, marginTop: scale(10), marginBottom: scale(4) };
-        if (isH3) baseStyle = { fontSize: scale(14), fontWeight: 'bold', color: theme.text, marginTop: scale(8), marginBottom: scale(2) };
-        
-        const tokens: any[] = [];
-        let remaining = content;
-        
-        while (remaining.length > 0) {
-            const linkMatch = remaining.match(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/);
-            const rawUrlMatch = remaining.match(/(https?:\/\/[^\s]+)/);
-            const boldMatch = remaining.match(/\*\*([^\*]+)\*\*/);
-            const boldMatch2 = remaining.match(/__([^_]+)__/);
-            const italicMatch = remaining.match(/\*([^\*]+)\*/);
-            const italicMatch2 = remaining.match(/_([^_]+)_/);
-            
-            let bestMatch: any = null;
-            let bestIndex = remaining.length;
-            let type = '';
-            let textValue = '';
-            let urlValue = '';
-            let matchLength = 0;
-            
-            const checkMatch = (match: any, t: string) => {
-                if (match && match.index < bestIndex) {
-                    bestIndex = match.index;
-                    bestMatch = match;
-                    type = t;
-                }
-            };
-            
-            checkMatch(linkMatch, 'md_link');
-            checkMatch(rawUrlMatch, 'raw_url');
-            checkMatch(boldMatch, 'bold');
-            checkMatch(boldMatch2, 'bold');
-            checkMatch(italicMatch, 'italic');
-            checkMatch(italicMatch2, 'italic');
-            
-            if (bestMatch) {
-                if (bestIndex > 0) {
-                    tokens.push({ type: 'text', text: remaining.substring(0, bestIndex) });
-                }
-                
-                if (type === 'md_link') {
-                    textValue = bestMatch?.[1] || '';
-                    urlValue = bestMatch?.[2] || '';
-                    matchLength = bestMatch?.[0]?.length || 0;
-                } else if (type === 'raw_url') {
-                    textValue = bestMatch?.[0] || '';
-                    urlValue = bestMatch?.[0] || '';
-                    matchLength = bestMatch?.[0]?.length || 0;
-                } else if (type === 'bold') {
-                    textValue = bestMatch?.[1] || '';
-                    matchLength = bestMatch?.[0]?.length || 0;
-                } else if (type === 'italic') {
-                    textValue = bestMatch?.[1] || '';
-                    matchLength = bestMatch?.[0]?.length || 0;
-                }
-                
-                tokens.push({ type, text: textValue, url: urlValue });
-                remaining = remaining.substring(bestIndex + matchLength);
-            } else {
-                tokens.push({ type: 'text', text: remaining });
-                remaining = '';
-            }
-        }
-        
-        const lineContent = tokens.map((tok, idx) => {
-            if (tok.type === 'md_link' || tok.type === 'raw_url') {
-                return <Text key={idx} style={{ color: isDark ? '#60a5fa' : '#2563eb', textDecorationLine: 'underline' }} onPress={() => Linking.openURL(tok.url)}>{tok.text}</Text>;
-            }
-            if (tok.type === 'bold') return <Text key={idx} style={{ fontWeight: 'bold' }}>{tok.text}</Text>;
-            if (tok.type === 'italic') return <Text key={idx} style={{ fontStyle: 'italic' }}>{tok.text}</Text>;
-            return <Text key={idx}>{tok.text}</Text>;
-        });
-        
-        if (isBullet) {
-            return (
-                <View key={lineIdx} style={{ flexDirection: 'row', paddingLeft: scale(8), marginBottom: scale(2) }}>
-                    <Text style={[baseStyle, { marginRight: scale(6) }]}>•</Text>
-                    <Text style={[baseStyle, { flex: 1 }]}>{lineContent}</Text>
-                </View>
-            );
-        }
-        
-        return <Text key={lineIdx} style={baseStyle}>{lineContent}</Text>;
+  if (!text) return null;
+  const decoded = text
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#039;/g, "'");
+  return decoded.split('\n').map((line, li) => {
+    const t = line.trim();
+    if (!t) return <View key={li} style={{ height: scale(6) }} />;
+    const isH1     = t.startsWith('# ');
+    const isH2     = t.startsWith('## ');
+    const isBullet = t.startsWith('- ') || t.startsWith('* ');
+    const body = isH1 ? t.slice(2) : isH2 ? t.slice(3) : isBullet ? t.slice(2) : t;
+    let base: any = { fontSize: scale(13), color: theme.text, lineHeight: scale(20) };
+    if (isH1) base = { fontSize: scale(16), fontWeight: '700', color: theme.text, marginTop: scale(10), marginBottom: scale(3) };
+    if (isH2) base = { fontSize: scale(14), fontWeight: '600', color: theme.text, marginTop: scale(8), marginBottom: scale(2) };
+    // tokenise bold + links
+    const tokens: any[] = [];
+    let rem = body;
+    while (rem.length > 0) {
+      const lm = rem.match(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/);
+      const um = rem.match(/(https?:\/\/[^\s]+)/);
+      const bm = rem.match(/\*\*([^*]+)\*\*/);
+      let best: any = null, bi = rem.length, bt = '';
+      const chk = (m: any, type: string) => { if (m && m.index < bi) { bi = m.index; best = m; bt = type; } };
+      chk(lm, 'link'); chk(um, 'url'); chk(bm, 'bold');
+      if (best) {
+        if (bi > 0) tokens.push({ t: 'txt', s: rem.slice(0, bi) });
+        if (bt === 'link') tokens.push({ t: 'link', s: best[1], url: best[2] });
+        else if (bt === 'url') tokens.push({ t: 'link', s: best[0], url: best[0] });
+        else tokens.push({ t: 'bold', s: best[1] });
+        rem = rem.slice(bi + best[0].length);
+      } else { tokens.push({ t: 'txt', s: rem }); rem = ''; }
+    }
+    const content = tokens.map((tk, i) => {
+      if (tk.t === 'link') return <Text key={i} style={{ color: isDark ? '#60a5fa' : '#2563eb', textDecorationLine: 'underline' }} onPress={() => Linking.openURL(tk.url)}>{tk.s}</Text>;
+      if (tk.t === 'bold') return <Text key={i} style={{ fontWeight: '700' }}>{tk.s}</Text>;
+      return <Text key={i}>{tk.s}</Text>;
     });
+    if (isBullet) return (
+      <View key={li} style={{ flexDirection: 'row', paddingLeft: scale(8), marginBottom: scale(3) }}>
+        <Text style={[base, { marginRight: scale(6) }]}>•</Text>
+        <Text style={[base, { flex: 1 }]}>{content}</Text>
+      </View>
+    );
+    return <Text key={li} style={base}>{content}</Text>;
+  });
 };
 
+/* ─── Colour helpers ─── */
+const subjectColor = (s: string) => {
+  const l = (s || '').toLowerCase();
+  if (l.includes('math'))     return '#3b82f6';
+  if (l.includes('physic'))   return '#8b5cf6';
+  if (l.includes('english'))  return '#10b981';
+  if (l.includes('chemist'))  return '#f59e0b';
+  if (l.includes('biolog'))   return '#ef4444';
+  if (l.includes('computer')) return '#06b6d4';
+  return '#64748b';
+};
+
+const classColor = (c: string) => {
+  const l = (c || '').toLowerCase();
+  if (l.includes('8th'))  return '#06b6d4';
+  if (l.includes('9th'))  return '#3b82f6';
+  if (l.includes('10'))   return '#10b981';
+  if (l.includes('1st'))  return '#f59e0b';
+  if (l.includes('2nd'))  return '#ef4444';
+  return '#8b5cf6';
+};
+
+const typeOf = (notice: any) => {
+  const title = (notice.title || '').toLowerCase();
+  const body  = (notice.message || notice.content || '').toLowerCase();
+  if (title.includes('pdf')   || body.includes('.pdf'))   return { label: 'PDF',  color: '#ef4444', icon: 'document'      };
+  if (title.includes('ppt')   || body.includes('.ppt'))   return { label: 'PPT',  color: '#f59e0b', icon: 'easel'         };
+  if (title.includes('video') || body.includes('video'))  return { label: 'VIDEO',color: '#8b5cf6', icon: 'play-circle'   };
+  if (title.includes('book')  || body.includes('book'))   return { label: 'BOOK', color: '#10b981', icon: 'book'          };
+  return                                                           { label: 'NOTE', color: '#3b82f6', icon: 'document-text' };
+};
+
+/* ═══════════════════════════════════════════════════ */
 export const LibraryScreen: React.FC = () => {
   const { theme, isDark } = useTheme();
   const navigation = useNavigation<any>();
-  const notices = useAppSelector(state => state.notifications.notices) as Notice[];
-  const classesFromStore = useAppSelector((state: any) => state.appSettings?.classes) as string[] || [];
-  const subjectsFromStore = useAppSelector((state: any) => state.appSettings?.books) as string[] || [];
+  const dispatch   = useAppDispatch();
+  const insets     = useSafeAreaInsets();
 
-  const dispatch = useAppDispatch();
-  const readIds = useAppSelector(state => state.notifications.readIds) as string[];
-  const unreadCount = notices.filter(n => !readIds.includes(n.id)).length;
-  
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterClass, setFilterClass] = useState<string>('All Classes');
-  const [filterSubject, setFilterSubject] = useState<string>('All Subjects');
-  const [filterType, setFilterType] = useState<string>('All');
-  
-  // Modal states
-  const [pickerModalVisible, setPickerModalVisible] = useState(false);
-  const [pickerType, setPickerType] = useState<'Class'|'Subject'>('Class');
-  
-  // Content View Modal state
-  const [viewModalVisible, setViewModalVisible] = useState(false);
-  const [selectedMaterial, setSelectedMaterial] = useState<any>(null);
+  const notices   = useAppSelector(s => s.notifications.notices) as Notice[];
+  const readIds   = useAppSelector(s => s.notifications.readIds) as string[];
+  const classes   = useAppSelector((s: any) => s.appSettings?.classes  as string[]) || [];
+  const subjects  = useAppSelector((s: any) => s.appSettings?.books    as string[]) || [];
 
-  // Use classes and subjects from Redux (synced with admin settings)
-  const desiredOrder = ["8th", "9th", "10th", "1st Year", "2nd Year"];
-  const availableClasses = [...classesFromStore].sort((a, b) => {
-      let indexA = desiredOrder.indexOf(a);
-      let indexB = desiredOrder.indexOf(b);
-      if (indexA === -1) indexA = 999;
-      if (indexB === -1) indexB = 999;
-      return indexA - indexB;
-  });
-  const availableSubjects = subjectsFromStore;
+  const unread    = notices.filter(n => !readIds.includes(n.id)).length;
 
-  // Derived stats
-  const totalMaterials = notices.length;
-  const uniqueClassesCount = availableClasses.length || new Set(notices.map((n: any) => n.targetClass).filter(c => c && c !== 'All')).size;
-  const uniqueSubjectsCount = availableSubjects.length || new Set(notices.map((n: any) => n.subject).filter(s => s && s !== 'Select Subject')).size;
+  const [search,     setSearch]     = useState('');
+  const [selClass,   setSelClass]   = useState('All Classes');
+  const [selSubject, setSelSubject] = useState('All Subjects');
 
-  const getSubjectColor = (subject: string) => {
-      if (!subject || subject === 'All Subjects' || subject === 'Select Subject') return '#64748b';
-      const s = subject.toLowerCase();
-      if (s.includes('math')) return '#3b82f6';
-      if (s.includes('physic')) return '#8b5cf6';
-      if (s.includes('english')) return '#10b981';
-      if (s.includes('chemist')) return '#f59e0b';
-      if (s.includes('biolog')) return '#ef4444';
-      if (s.includes('computer')) return '#06b6d4';
-      return '#334155';
-  };
+  const [picker, setPicker]         = useState<{ open: boolean; kind: 'Class' | 'Subject' }>({ open: false, kind: 'Class' });
+  const [detail, setDetail]         = useState<{ open: boolean; item: any }>({ open: false, item: null });
 
-  const getClassColor = (className: string) => {
-      if (!className || className === 'All Classes' || className === 'Select Class') return '#64748b';
-      const c = className.toLowerCase();
-      if (c.includes('8th')) return '#06b6d4';
-      if (c.includes('9th')) return '#3b82f6';
-      if (c.includes('10')) return '#10b981';
-      if (c.includes('1st')) return '#f59e0b';
-      if (c.includes('2nd')) return '#ef4444';
-      return '#8b5cf6';
-  };
-
-  const getExtendedData = (notice: any) => {
-      const title = notice.title || 'Untitled';
-      const c = (notice.message || notice.content || '').toLowerCase();
-      let type = 'DOC';
-      let typeColor = '#3b82f6';
-      let iconName = 'document-text';
-      
-      if (c.includes('.pdf') || title.toLowerCase().includes('pdf')) { type = 'PDF'; typeColor = '#ef4444'; iconName = 'document'; }
-      else if (c.includes('.ppt') || title.toLowerCase().includes('ppt')) { type = 'PPT'; typeColor = '#f59e0b'; iconName = 'easel'; }
-      else if (c.includes('video') || title.toLowerCase().includes('video')) { type = 'VIDEO'; typeColor = '#8b5cf6'; iconName = 'play-circle'; }
-      else if (c.includes('book') || title.toLowerCase().includes('book')) { type = 'BOOK'; typeColor = '#10b981'; iconName = 'book'; }
-      
-      return {
-          targetClass: notice.targetClass || '9th Grade',
-          subject: notice.subject || 'General',
-          teacherName: notice.teacherName || 'Super Admin',
-          contentBody: notice.content || notice.message || '',
-          type, typeColor, iconName
-      };
-  };
-
-  // Filtered data
-  const filteredNotices = notices.filter((n: any) => {
-      const ext = getExtendedData(n);
-      
-      // Text search
-      if (searchQuery) {
-        const q = searchQuery.toLowerCase();
-        const tMatch = (n.title || '').toLowerCase().includes(q) || ext.contentBody.toLowerCase().includes(q);
-        const sMatch = ext.subject.toLowerCase().includes(q) || ext.targetClass.toLowerCase().includes(q);
-        if (!tMatch && !sMatch) return false;
-      }
-      
-      // Class filter
-      if (filterClass !== 'All Classes' && ext.targetClass !== filterClass) return false;
-      
-      // Subject filter
-      if (filterSubject !== 'All Subjects' && ext.subject !== filterSubject) return false;
-      
-      // Type chip filter
-      if (filterType !== 'All') {
-          if (filterType === 'Notes' && ext.type !== 'DOC') return false;
-          if (filterType === 'PDF' && ext.type !== 'PDF') return false;
-          if (filterType === 'Books' && ext.type !== 'BOOK') return false;
-          if (filterType === 'Videos' && ext.type !== 'VIDEO') return false;
-          if (filterType === 'PPT' && ext.type !== 'PPT') return false;
-      }
-      
-      return true;
+  /* Sorted classes */
+  const ORDER = ['8th', '9th', '10th', '1st Year', '2nd Year'];
+  const sortedClasses = [...classes].sort((a, b) => {
+    const rank = (s: string) => { const i = ORDER.findIndex(o => s.toLowerCase().includes(o.toLowerCase())); return i === -1 ? 99 : i; };
+    return rank(a) - rank(b);
   });
 
-  const handleViewMaterial = (item: any) => {
-      setSelectedMaterial(item);
-      setViewModalVisible(true);
-      if (!readIds.includes(item.id)) {
-          dispatch(markAsRead(item.id));
-      }
+  /* Stats */
+  const totalItems   = notices.length;
+  const subjCount    = subjects.length || new Set(notices.map((n: any) => n.subject).filter(Boolean)).size;
+  const classCount   = classes.length  || new Set(notices.map((n: any) => n.targetClass).filter(Boolean)).size;
+
+  /* Filtered */
+  const filtered = notices.filter((n: any) => {
+    const cls  = n.targetClass || '';
+    const subj = n.subject     || '';
+    if (search) {
+      const q = search.toLowerCase();
+      if (!(n.title || '').toLowerCase().includes(q) &&
+          !cls.toLowerCase().includes(q) &&
+          !subj.toLowerCase().includes(q)) return false;
+    }
+    if (selClass   !== 'All Classes'  && cls  !== selClass)   return false;
+    if (selSubject !== 'All Subjects' && subj !== selSubject)  return false;
+    return true;
+  });
+
+  const openPicker = (kind: 'Class' | 'Subject') => setPicker({ open: true, kind });
+  const pickItem   = (val: string) => {
+    if (picker.kind === 'Class') setSelClass(val);
+    else setSelSubject(val);
+    setPicker(p => ({ ...p, open: false }));
+  };
+  const openDetail = (item: any) => {
+    setDetail({ open: true, item });
+    if (!readIds.includes(item.id)) dispatch(markAsRead(item.id));
   };
 
-  const renderMaterial = ({ item }: { item: Notice }) => {
-    const ext = getExtendedData(item);
-    
+  const hasFilters = selClass !== 'All Classes' || selSubject !== 'All Subjects' || search.length > 0;
+
+  /* ─── Material card ─── */
+  const renderCard = ({ item }: { item: Notice }) => {
+    const info   = typeOf(item);
+    // Clean up raw placeholder values from Firestore
+    const rawCls  = (item as any).targetClass || '';
+    const rawSubj = (item as any).subject     || '';
+    const cls  = (!rawCls  || rawCls  === 'All' || rawCls  === 'Select Class')   ? 'All Classes' : rawCls;
+    const subj = (!rawSubj || rawSubj === 'Select Subject' || rawSubj === 'None') ? 'General'     : rawSubj;
+    const isNew  = !readIds.includes(item.id);
+
     return (
-        <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border, shadowOpacity: isDark ? 0.3 : 0.04 }]}>
-          <View style={styles.cardLeft}>
-            <View style={[styles.docIconWrapper, { backgroundColor: isDark ? theme.background : '#fafafa', borderColor: ext.typeColor + '30' }]}>
-              <Ionicons name={ext.iconName as any} size={scale(28)} color={ext.typeColor} />
-              <View style={[styles.typeBadge, { backgroundColor: ext.typeColor }]}>
-                <Text style={styles.typeBadgeText}>{ext.type}</Text>
+      <TouchableOpacity
+        activeOpacity={0.75}
+        onPress={() => openDetail(item)}
+        style={[styles.card, {
+          backgroundColor: theme.card,
+          borderColor: theme.border,
+          borderLeftColor: info.color,
+        }]}
+      >
+        {/* Left accent icon */}
+        <View style={[styles.cardIconWrap, { backgroundColor: isDark ? info.color + '22' : info.color + '14' }]}>
+          <Ionicons name={info.icon as any} size={scale(20)} color={info.color} />
+          <View style={[styles.typePill, { backgroundColor: info.color }]}>
+            <Text style={styles.typePillTxt}>{info.label}</Text>
+          </View>
+        </View>
+
+        {/* Body */}
+        <View style={styles.cardBody}>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+            <Text style={[styles.cardTitle, { color: theme.text, flex: 1 }]} numberOfLines={2}>
+              {item.title}
+            </Text>
+            {isNew && (
+              <View style={[styles.newBadge, { backgroundColor: '#10b981' }]}>
+                <Text style={styles.newBadgeTxt}>NEW</Text>
               </View>
+            )}
+          </View>
+
+          <View style={styles.badgeRow}>
+            <View style={[styles.badge, { backgroundColor: isDark ? classColor(cls) + '25' : classColor(cls) + '15' }]}>
+              <Ionicons name="school-outline" size={scale(9)} color={classColor(cls)} style={{ marginRight: scale(3) }} />
+              <Text style={[styles.badgeTxt, { color: classColor(cls) }]}>{cls}</Text>
+            </View>
+            <View style={[styles.badge, { backgroundColor: isDark ? subjectColor(subj) + '25' : subjectColor(subj) + '15' }]}>
+              <Ionicons name="book-outline" size={scale(9)} color={subjectColor(subj)} style={{ marginRight: scale(3) }} />
+              <Text style={[styles.badgeTxt, { color: subjectColor(subj) }]}>{subj}</Text>
             </View>
           </View>
-          
-          <View style={styles.cardCenter}>
-            <Text style={[styles.cardTitle, { color: theme.text }]} numberOfLines={1}>{item.title}</Text>
-            <Text style={[styles.cardSubtitle, { color: theme.placeholder }]} numberOfLines={1}>
-               <Text style={styles.blueLabel}>Class: </Text>{ext.targetClass}  <Text style={styles.blueLabel}>•  Subject: </Text>
-               <Text style={{ color: getSubjectColor(ext.subject), fontWeight: '600' }}>{ext.subject}</Text>
+
+          <View style={styles.metaRow}>
+            <Ionicons name="time-outline" size={scale(11)} color={theme.placeholder} />
+            <Text style={[styles.metaTxt, { color: theme.placeholder }]}>
+              {(item as any).timeAgo || 'Recently uploaded'}
             </Text>
-            
-            <View style={styles.cardMetaRow}>
-              <Ionicons name="calendar-outline" size={scale(12)} color={theme.placeholder} />
-              <Text style={[styles.metaText, { color: theme.placeholder }]}>{item.timeAgo || 'Uploaded recently'}</Text>
-              <Ionicons name="person-outline" size={scale(12)} color={theme.placeholder} style={{ marginLeft: scale(8) }} />
-              <Text style={[styles.metaText, { color: theme.placeholder }]}>{ext.teacherName}</Text>
-            </View>
+            <Ionicons name="person-outline" size={scale(11)} color={theme.placeholder} style={{ marginLeft: scale(10) }} />
+            <Text style={[styles.metaTxt, { color: theme.placeholder, flex: 1 }]} numberOfLines={1}>
+              {(item as any).teacherName || 'Admin'}
+            </Text>
+          </View>
         </View>
-        
-        <View style={styles.cardRight}>
-          <View style={{ flex: 1 }} />
-          <TouchableOpacity 
-             style={styles.btnViewDownload}
-             onPress={() => handleViewMaterial(item)}
-          >
-            <Text style={styles.btnViewDownloadText}>View</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+
+        <Ionicons name="chevron-forward" size={scale(15)} color={theme.placeholder} style={{ alignSelf: 'center', marginLeft: scale(4) }} />
+      </TouchableOpacity>
     );
   };
 
-  const openPicker = (type: 'Class'|'Subject') => {
-      setPickerType(type);
-      setPickerModalVisible(true);
-  };
-
-  const selectPickerItem = (val: string) => {
-      if (pickerType === 'Class') setFilterClass(val);
-      else setFilterSubject(val);
-      setPickerModalVisible(false);
-  };
-
-  return (
-      <View style={[styles.container, { backgroundColor: theme.background }]}>
-        {/* Hero Header */}
-        <View style={styles.headerBackground}>
-          <Image 
-            source={require('../../../assets/the-seeks-logo.png')} 
-            style={{ position: 'absolute', right: -scale(135), top: scale(40), width: scale(430), height: scale(90), opacity: 0.15, resizeMode: 'contain' }} 
-          />
-        </View>
-        
-        <SafeAreaView edges={['top']} style={{ zIndex: 10 }}>
-            <View style={styles.headerTopRow}>
-              <TouchableOpacity 
-              onPress={() => {
-                if (navigation.canGoBack()) {
-                  navigation.goBack();
-                } else {
-                  const routes = navigation.getState()?.routeNames || [];
-                  if (routes.includes('TeacherDashboardScreen')) {
-                    navigation.navigate('TeacherDashboardScreen' as any);
-                  } else if (routes.includes('Main')) {
-                    navigation.navigate('Main' as any);
-                  } else if (routes.includes('Home')) {
-                    navigation.navigate('Home' as any);
-                  }
-                }
-              }}
-              style={{
-                width: scale(40),
-                height: scale(40),
-                borderRadius: scale(20),
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                justifyContent: 'center',
-                alignItems: 'center',
-                zIndex: 10
-              }}
-              hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
-            >
-              <Ionicons name="chevron-back" size={scale(24)} color="#fff" />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>e-Library</Text>
-            <TouchableOpacity style={{ padding: scale(8) }}>
-              <Ionicons name="notifications-outline" size={scale(24)} color="#fff" />
-              {unreadCount > 0 && (
-                <View style={styles.notifBadge}><Text style={styles.notifBadgeText}>{unreadCount}</Text></View>
-              )}
-            </TouchableOpacity>
-          </View>
-                    <View style={styles.headerSubtitleWrapper}>
-               <Text style={styles.headerSubtitle}>Explore study materials, notes & resources</Text>
-               <Text style={styles.headerSubtitle}>shared by academy administrators</Text>
+  /* ─── FlatList header ─── */
+  const ListHeader = (
+    <View>
+      {/* Stats row */}
+      <View style={styles.statsRow}>
+        {([
+          { icon: 'documents-outline',  color: theme.primary,  val: totalItems, lbl: 'Materials' },
+          { icon: 'book-outline',        color: '#8b5cf6',      val: subjCount,  lbl: 'Subjects'  },
+          { icon: 'school-outline',      color: '#10b981',      val: classCount, lbl: 'Classes'   },
+        ] as any[]).map(({ icon, color, val, lbl }) => (
+          <View key={lbl} style={[styles.statChip, { backgroundColor: theme.card, borderColor: theme.border }]}>
+            <View style={[styles.statIconBox, { backgroundColor: isDark ? color + '25' : color + '14' }]}>
+              <Ionicons name={icon} size={scale(16)} color={color} />
             </View>
-        </SafeAreaView>
-        
-        {/* Scrollable Content */}
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <FlatList
-            style={{ flex: 1 }}
-          data={filteredNotices}
-          keyExtractor={item => item.id}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          ListHeaderComponent={
-            <View>
-               {/* Stats Row */}
-               <View style={styles.statsRow}>
-               <StatCard iconName="document-text-outline" iconColor="#8b5cf6" value={totalMaterials} label="Materials" theme={theme} isDark={isDark} />
-               <StatCard iconName="book-outline" iconColor="#3b82f6" value={uniqueSubjectsCount} label="Subjects" theme={theme} isDark={isDark} />
-               <StatCard iconName="school-outline" iconColor="#10b981" value={uniqueClassesCount} label="Classes" theme={theme} isDark={isDark} />
-             </View>
-             
-             {/* Search */}
-             <View style={[styles.searchContainer, { backgroundColor: theme.card }]}>
-               <Ionicons name="search" size={scale(18)} color={theme.placeholder} style={{ marginRight: scale(8) }} />
-               <TextInput 
-                 style={[styles.searchInput, { color: theme.text }]}
-                 placeholder="Search materials by title, subject or class..."
-                 placeholderTextColor={theme.placeholder}
-                 value={searchQuery}
-                 onChangeText={setSearchQuery}
-               />
-               <TouchableOpacity style={{ padding: scale(4) }}>
-                 <Ionicons name="options-outline" size={scale(20)} color={theme.placeholder} />
-               </TouchableOpacity>
-             </View>
-             
-             {/* Dropdowns */}
-             <View style={styles.dropdownsRow}>
-               <DropdownBtn label={filterClass.length > 10 ? filterClass.substring(0,8)+'...' : filterClass} onPress={() => openPicker('Class')} theme={theme} isDark={isDark} />
-               <DropdownBtn label={filterSubject.length > 10 ? filterSubject.substring(0,8)+'...' : filterSubject} onPress={() => openPicker('Subject')} theme={theme} isDark={isDark} />
-               <DropdownBtn label="Sort" hasIcon={true} theme={theme} isDark={isDark} />
-             </View>
-             
-             {/* Chips Scroll */}
-             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll} contentContainerStyle={styles.chipsContainer}>
-               <Chip label="All" isActive={filterType === 'All'} onPress={() => setFilterType('All')} theme={theme} isDark={isDark} />
-               <Chip label="Notes" iconName="document-text-outline" color="#3b82f6" isActive={filterType === 'Notes'} onPress={() => setFilterType('Notes')} theme={theme} isDark={isDark} />
-               <Chip label="PDF" iconName="document-outline" color="#ef4444" isActive={filterType === 'PDF'} onPress={() => setFilterType('PDF')} theme={theme} isDark={isDark} />
-               <Chip label="Books" iconName="book-outline" color="#10b981" isActive={filterType === 'Books'} onPress={() => setFilterType('Books')} theme={theme} isDark={isDark} />
-               <Chip label="Videos" iconName="play-circle-outline" color="#8b5cf6" isActive={filterType === 'Videos'} onPress={() => setFilterType('Videos')} theme={theme} isDark={isDark} />
-               <Chip label="PPT" iconName="easel-outline" color="#f59e0b" isActive={filterType === 'PPT'} onPress={() => setFilterType('PPT')} theme={theme} isDark={isDark} />
-             </ScrollView>
+            <Text style={[styles.statVal, { color: theme.text }]}>{val}</Text>
+            <Text style={[styles.statLbl, { color: theme.placeholder }]}>{lbl}</Text>
           </View>
-        }
-        renderItem={renderMaterial}
-        ListEmptyComponent={
-          <View style={{ alignItems: 'center', marginTop: scale(40) }}>
-             <Ionicons name="folder-open-outline" size={scale(48)} color={theme.placeholder} />
-             <Text style={{ marginTop: scale(12), color: theme.placeholder, fontSize: scale(14) }}>No materials found</Text>
-          </View>
-        }
+        ))}
+      </View>
+
+      {/* Search */}
+      <View style={[styles.searchBox, { backgroundColor: theme.card, borderColor: theme.border }]}>
+        <Ionicons name="search-outline" size={scale(16)} color={theme.placeholder} style={{ marginRight: scale(8) }} />
+        <TextInput
+          style={[styles.searchInput, { color: theme.text }]}
+          placeholder="Search by title, class or subject…"
+          placeholderTextColor={theme.placeholder}
+          value={search}
+          onChangeText={setSearch}
+          returnKeyType="search"
+        />
+        {search.length > 0 && (
+          <TouchableOpacity onPress={() => setSearch('')} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+            <Ionicons name="close-circle" size={scale(16)} color={theme.placeholder} />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Filter selectors */}
+      <View style={styles.filterRow}>
+        <TouchableOpacity
+          style={[styles.filterBtn, {
+            backgroundColor: theme.card,
+            borderColor: selClass !== 'All Classes' ? theme.primary : theme.border,
+          }]}
+          onPress={() => openPicker('Class')}
+          activeOpacity={0.7}
+        >
+          <Ionicons
+            name="school-outline"
+            size={scale(13)}
+            color={selClass !== 'All Classes' ? theme.primary : theme.placeholder}
+            style={{ marginRight: scale(5) }}
+          />
+          <Text
+            style={[styles.filterBtnTxt, {
+              color: selClass !== 'All Classes' ? theme.primary : theme.text,
+              fontWeight: selClass !== 'All Classes' ? '700' : '500',
+            }]}
+            numberOfLines={1}
+          >
+            {selClass}
+          </Text>
+          <Ionicons name="chevron-down" size={scale(12)} color={selClass !== 'All Classes' ? theme.primary : theme.placeholder} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.filterBtn, {
+            backgroundColor: theme.card,
+            borderColor: selSubject !== 'All Subjects' ? '#8b5cf6' : theme.border,
+          }]}
+          onPress={() => openPicker('Subject')}
+          activeOpacity={0.7}
+        >
+          <Ionicons
+            name="book-outline"
+            size={scale(13)}
+            color={selSubject !== 'All Subjects' ? '#8b5cf6' : theme.placeholder}
+            style={{ marginRight: scale(5) }}
+          />
+          <Text
+            style={[styles.filterBtnTxt, {
+              color: selSubject !== 'All Subjects' ? '#8b5cf6' : theme.text,
+              fontWeight: selSubject !== 'All Subjects' ? '700' : '500',
+            }]}
+            numberOfLines={1}
+          >
+            {selSubject}
+          </Text>
+          <Ionicons name="chevron-down" size={scale(12)} color={selSubject !== 'All Subjects' ? '#8b5cf6' : theme.placeholder} />
+        </TouchableOpacity>
+
+        {hasFilters && (
+          <TouchableOpacity
+            style={[styles.clearBtn, { borderColor: theme.border, backgroundColor: isDark ? '#1e293b' : '#f8fafc' }]}
+            onPress={() => { setSearch(''); setSelClass('All Classes'); setSelSubject('All Subjects'); }}
+            hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+          >
+            <Ionicons name="close" size={scale(14)} color={theme.textSecondary || theme.placeholder} />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Result count line */}
+      <Text style={[styles.resultLine, { color: theme.placeholder }]}>
+        Showing {filtered.length} of {totalItems} materials
+        {unread > 0 ? `  ·  ${unread} unread` : ''}
+      </Text>
+    </View>
+  );
+
+  /* ═══════════════════════════════════════════════════ */
+  return (
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: theme.background }]}
+      edges={['top', 'left', 'right']}
+    >
+      <StatusBar
+        barStyle={isDark ? 'light-content' : 'dark-content'}
+        backgroundColor={theme.card}
       />
+
+      {/* ── Header ── */}
+      <View style={[styles.header, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
+        <TouchableOpacity
+          onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.navigate('TeacherDashboardScreen' as any)}
+          style={styles.headerBtn}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="arrow-back" size={scale(22)} color={theme.text} />
+        </TouchableOpacity>
+
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.headerTitle, { color: theme.text }]}>e-Library</Text>
+          <Text style={[styles.headerSub, { color: theme.placeholder }]}>Study materials & resources</Text>
+        </View>
+
+        {unread > 0 && (
+          <View style={[styles.unreadPill, { backgroundColor: isDark ? '#ef444425' : '#fef2f2', borderColor: '#ef444440' }]}>
+            <View style={[styles.unreadDot, { backgroundColor: '#ef4444' }]} />
+            <Text style={[styles.unreadPillTxt, { color: '#ef4444' }]}>{unread} new</Text>
+          </View>
+        )}
+      </View>
+
+      {/* ── List ── */}
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <FlatList
+          data={filtered}
+          keyExtractor={item => item.id}
+          renderItem={renderCard}
+          ListHeaderComponent={ListHeader}
+          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + scale(20) }]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <View style={[styles.emptyIconWrap, { backgroundColor: isDark ? '#1e293b' : '#f1f5f9' }]}>
+                <Ionicons name="folder-open-outline" size={scale(40)} color={theme.placeholder} />
+              </View>
+              <Text style={[styles.emptyTitle, { color: theme.text }]}>No materials found</Text>
+              <Text style={[styles.emptySub, { color: theme.placeholder }]}>
+                {hasFilters ? 'Try adjusting your search or filters.' : 'No study materials have been uploaded yet.'}
+              </Text>
+              {hasFilters && (
+                <TouchableOpacity
+                  style={[styles.clearFiltersBtn, { borderColor: theme.primary, backgroundColor: isDark ? theme.primary + '20' : theme.primary + '10' }]}
+                  onPress={() => { setSearch(''); setSelClass('All Classes'); setSelSubject('All Subjects'); }}
+                >
+                  <Text style={[styles.clearFiltersBtnTxt, { color: theme.primary }]}>Clear Filters</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          }
+        />
       </KeyboardAvoidingView>
 
-      {/* Dynamic Picker Modal */}
-      <Modal visible={pickerModalVisible} transparent={true} animationType="fade">
-         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setPickerModalVisible(false)}>
-            <View style={[styles.modalContent, { backgroundColor: theme.card }]}>
-               <Text style={[styles.modalTitle, { color: theme.text }]}>Select {pickerType}</Text>
-               <ScrollView style={{ maxHeight: height * 0.5 }}>
-                  <TouchableOpacity style={styles.modalOption} onPress={() => selectPickerItem(`All ${pickerType === 'Class' ? 'Classes' : 'Subjects'}`)}>
-                     <Text style={[styles.modalOptionText, { color: theme.text }]}>All {pickerType === 'Class' ? 'Classes' : 'Subjects'}</Text>
-                  </TouchableOpacity>
-                  {(pickerType === 'Class' ? availableClasses : availableSubjects).map((item: any, idx) => {
-                      const color = pickerType === 'Subject' ? getSubjectColor(item) : getClassColor(item);
-                      return (
-                      <TouchableOpacity key={idx} style={styles.modalOption} onPress={() => selectPickerItem(item)}>
-                         <View style={[styles.colorDot, { backgroundColor: color }]} />
-                         <Text style={[styles.modalOptionText, { color: theme.text }]}>{item}</Text>
-                      </TouchableOpacity>
-                  )})}
-               </ScrollView>
+      {/* ── Picker modal (bottom sheet) ── */}
+      <Modal visible={picker.open} transparent animationType="slide" onRequestClose={() => setPicker(p => ({ ...p, open: false }))}>
+        <View style={styles.sheetOverlay}>
+          <TouchableOpacity style={StyleSheet.absoluteFillObject} onPress={() => setPicker(p => ({ ...p, open: false }))} />
+          <View style={[styles.sheet, { backgroundColor: theme.card }]}>
+            <View style={[styles.sheetHandle, { backgroundColor: isDark ? '#334155' : '#cbd5e1' }]} />
+            <View style={[styles.sheetHeader, { borderBottomColor: theme.border }]}>
+              <Text style={[styles.sheetTitle, { color: theme.text }]}>
+                Select {picker.kind}
+              </Text>
+              <TouchableOpacity onPress={() => setPicker(p => ({ ...p, open: false }))}>
+                <Ionicons name="close" size={scale(20)} color={theme.text} />
+              </TouchableOpacity>
             </View>
-         </TouchableOpacity>
-      </Modal>
-
-      {/* Material View Modal */}
-      <Modal visible={viewModalVisible} transparent={true} animationType="slide">
-         <View style={[styles.viewModalContainer, { backgroundColor: theme.background }]}>
-            <SafeAreaView edges={['top', 'bottom']} style={[styles.viewModalSafeArea, { backgroundColor: theme.background }]}>
-               <View style={[styles.viewModalHeader, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
-                  <Text style={[styles.viewModalHeaderTitle, { color: theme.text }]} numberOfLines={1}>{selectedMaterial?.title || 'Material Details'}</Text>
-                  <TouchableOpacity onPress={() => setViewModalVisible(false)} style={[styles.closeBtn, { backgroundColor: isDark ? theme.border : '#f1f5f9' }]}>
-                     <Ionicons name="close" size={scale(24)} color={theme.text} />
-                  </TouchableOpacity>
-               </View>
-               <ScrollView style={styles.viewModalBody} contentContainerStyle={{ paddingBottom: scale(40) }}>
-                  {selectedMaterial && (
-                      <View>
-                         <View style={styles.viewModalMeta}>
-                             <View style={styles.viewModalMetaBadge}>
-                                 <Text style={styles.viewModalMetaBadgeText}>{selectedMaterial.targetClass || 'All Classes'}</Text>
-                             </View>
-                             <View style={[styles.viewModalMetaBadge, { backgroundColor: getSubjectColor(selectedMaterial.subject) + '20' }]}>
-                                 <Text style={[styles.viewModalMetaBadgeText, { color: getSubjectColor(selectedMaterial.subject) }]}>{selectedMaterial.subject || 'General'}</Text>
-                             </View>
-                         </View>
-                         <View style={styles.richTextContainer}>
-                             {renderRichText(selectedMaterial.content || selectedMaterial.message || 'No description available for this material.', theme, isDark)}
-                         </View>
-                      </View>
+            <ScrollView style={{ maxHeight: height * 0.48 }} showsVerticalScrollIndicator={false}>
+              {/* "All" option */}
+              {(['All Classes', 'All Subjects'] as const).filter((_, i) => (i === 0) === (picker.kind === 'Class')).map(val => (
+                <TouchableOpacity
+                  key={val}
+                  style={[styles.sheetOption, { borderBottomColor: theme.border }]}
+                  onPress={() => pickItem(val)}
+                >
+                  <View style={[styles.dot, { backgroundColor: '#94a3b8' }]} />
+                  <Text style={[styles.sheetOptionTxt, { color: theme.text, flex: 1 }]}>{val}</Text>
+                  {((picker.kind === 'Class' && selClass === val) || (picker.kind === 'Subject' && selSubject === val)) && (
+                    <Ionicons name="checkmark-circle" size={scale(18)} color={theme.primary} />
                   )}
-               </ScrollView>
-            </SafeAreaView>
-         </View>
+                </TouchableOpacity>
+              ))}
+              {/* Items */}
+              {(picker.kind === 'Class' ? sortedClasses : subjects).map((item: string, i: number) => {
+                const color    = picker.kind === 'Class' ? classColor(item) : subjectColor(item);
+                const isActive = picker.kind === 'Class' ? selClass === item : selSubject === item;
+                return (
+                  <TouchableOpacity
+                    key={i}
+                    style={[styles.sheetOption, { borderBottomColor: theme.border, backgroundColor: isActive ? (isDark ? color + '18' : color + '08') : 'transparent' }]}
+                    onPress={() => pickItem(item)}
+                  >
+                    <View style={[styles.dot, { backgroundColor: color }]} />
+                    <Text style={[styles.sheetOptionTxt, { color: isActive ? color : theme.text, fontWeight: isActive ? '700' : '400', flex: 1 }]}>{item}</Text>
+                    {isActive && <Ionicons name="checkmark-circle" size={scale(18)} color={color} />}
+                  </TouchableOpacity>
+                );
+              })}
+              <View style={{ height: scale(20) }} />
+            </ScrollView>
+          </View>
+        </View>
       </Modal>
 
-    </View>
+      {/* ── Detail popup ── */}
+      <Modal
+        visible={detail.open}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDetail(d => ({ ...d, open: false }))}
+        statusBarTranslucent
+      >
+        <View style={styles.popupOverlay}>
+          {/* Backdrop tap to dismiss */}
+          <TouchableOpacity
+            style={StyleSheet.absoluteFillObject}
+            activeOpacity={1}
+            onPress={() => setDetail(d => ({ ...d, open: false }))}
+          />
+
+          {detail.item != null && (() => {
+            const rawC  = detail.item.targetClass || '';
+            const rawS  = detail.item.subject     || '';
+            const dCls  = (!rawC || rawC === 'All' || rawC === 'Select Class')    ? 'All Classes' : rawC;
+            const dSubj = (!rawS || rawS === 'Select Subject' || rawS === 'None') ? 'General'     : rawS;
+            const info  = typeOf(detail.item);
+
+            return (
+              <View style={[styles.popupCard, { backgroundColor: theme.card }]}>
+
+                {/* ─ Coloured accent top bar ─ */}
+                <View style={[styles.popupAccentBar, { backgroundColor: info.color }]} />
+
+                {/* ─ Header row ─ */}
+                <View style={[styles.popupHeader, { borderBottomColor: theme.border }]}>
+                  <View style={[styles.popupIconBox, { backgroundColor: isDark ? info.color + '28' : info.color + '15' }]}>
+                    <Ionicons name={info.icon as any} size={scale(24)} color={info.color} />
+                  </View>
+
+                  <View style={{ flex: 1 }}>
+                    <View style={[styles.popupTypePill, { backgroundColor: info.color }]}>
+                      <Text style={styles.popupTypePillTxt}>{info.label}</Text>
+                    </View>
+                    <Text style={[styles.popupTitle, { color: theme.text }]} numberOfLines={3}>
+                      {detail.item.title || 'Untitled Material'}
+                    </Text>
+                  </View>
+
+                  <TouchableOpacity
+                    onPress={() => setDetail(d => ({ ...d, open: false }))}
+                    style={[styles.popupCloseBtn, { backgroundColor: isDark ? '#1e293b' : '#f1f5f9' }]}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Ionicons name="close" size={scale(18)} color={theme.text} />
+                  </TouchableOpacity>
+                </View>
+
+                {/* ─ Meta row ─ */}
+                <View style={[styles.popupMetaRow, { borderBottomColor: theme.border, backgroundColor: isDark ? theme.background : '#f8fafc' }]}>
+                  <View style={[styles.popupMetaBadge, { backgroundColor: isDark ? classColor(dCls) + '30' : classColor(dCls) + '18' }]}>
+                    <Ionicons name="school-outline" size={scale(12)} color={classColor(dCls)} />
+                    <Text style={[styles.popupMetaTxt, { color: classColor(dCls) }]}>{dCls}</Text>
+                  </View>
+
+                  <View style={[styles.popupMetaBadge, { backgroundColor: isDark ? subjectColor(dSubj) + '30' : subjectColor(dSubj) + '18' }]}>
+                    <Ionicons name="book-outline" size={scale(12)} color={subjectColor(dSubj)} />
+                    <Text style={[styles.popupMetaTxt, { color: subjectColor(dSubj) }]}>{dSubj}</Text>
+                  </View>
+
+                  {!!detail.item.teacherName && (
+                    <View style={[styles.popupMetaBadge, { backgroundColor: isDark ? '#1e293b' : '#e2e8f0' }]}>
+                      <Ionicons name="person-outline" size={scale(12)} color={theme.placeholder} />
+                      <Text style={[styles.popupMetaTxt, { color: theme.placeholder }]} numberOfLines={1}>
+                        {detail.item.teacherName}
+                      </Text>
+                    </View>
+                  )}
+
+                  {!!detail.item.timeAgo && (
+                    <View style={[styles.popupMetaBadge, { backgroundColor: isDark ? '#1e293b' : '#e2e8f0' }]}>
+                      <Ionicons name="time-outline" size={scale(12)} color={theme.placeholder} />
+                      <Text style={[styles.popupMetaTxt, { color: theme.placeholder }]}>{detail.item.timeAgo}</Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* ─ Content area ─ */}
+                <ScrollView
+                  style={styles.popupScroll}
+                  contentContainerStyle={styles.popupBody}
+                  showsVerticalScrollIndicator={true}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  <Text style={[styles.popupSectionLabel, { color: theme.placeholder }]}>CONTENT</Text>
+                  <View style={[styles.richBox, { backgroundColor: isDark ? theme.background : '#f8fafc', borderColor: theme.border }]}>
+                    {renderRichText(
+                      detail.item.content || detail.item.message || 'No description has been provided for this material.',
+                      theme,
+                      isDark
+                    )}
+                  </View>
+                  <View style={{ height: scale(16) }} />
+                </ScrollView>
+
+                {/* ─ Footer close button ─ */}
+                <View style={[styles.popupFooter, { borderTopColor: theme.border }]}>
+                  <TouchableOpacity
+                    style={[styles.popupDoneBtn, { backgroundColor: info.color }]}
+                    onPress={() => setDetail(d => ({ ...d, open: false }))}
+                    activeOpacity={0.82}
+                  >
+                    <Ionicons name="checkmark" size={scale(16)} color="#fff" style={{ marginRight: scale(6) }} />
+                    <Text style={styles.popupDoneTxt}>Done</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            );
+          })()}
+        </View>
+      </Modal>
+    </SafeAreaView>
   );
 };
 
+/* ═══════════════════════════════════════════════════ */
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
-  headerBackground: {
-    backgroundColor: '#1e3a8a', height: scale(170),
-    borderBottomLeftRadius: scale(20), borderBottomRightRadius: scale(20),
-    position: 'absolute', top: 0, left: 0, right: 0, zIndex: 0
+  container: { flex: 1 },
+
+  /* Header */
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(12),
+    borderBottomWidth: 1,
+    gap: scale(10),
   },
-  headerTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: scale(12), paddingTop: scale(4) },
-  headerTitle: { color: '#fff', fontSize: scale(25), fontWeight: '800' },
-  notifBadge: { position: 'absolute', top: scale(6), right: scale(6), backgroundColor: '#ef4444', width: scale(14), height: scale(14), borderRadius: scale(7), justifyContent: 'center', alignItems: 'center' },
-  notifBadgeText: { color: '#fff', fontSize: scale(8), fontWeight: 'bold' },
-  headerSubtitleWrapper: { alignItems: 'center', marginTop: scale(4) },
-  headerSubtitle: { color: 'rgba(255,255,255,0.9)', fontSize: scale(10), lineHeight: scale(14) },
-  watermark: { position: 'absolute', right: -scale(20), bottom: -scale(20), opacity: 0.8 },
-  
-  listContent: { paddingTop: scale(20), paddingBottom: scale(100), paddingHorizontal: scale(8) },
-  
-  statsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: scale(8) },
-  statCard: { backgroundColor: '#fff', borderRadius: scale(8), padding: scale(6), width: '32%', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
-  statIconWrapper: { width: scale(28), height: scale(24), borderRadius: scale(6), justifyContent: 'center', alignItems: 'center', marginBottom: scale(2) },
-  statValue: { fontSize: scale(12), fontWeight: 'bold', color: '#1e293b' },
-  statLabel: { fontSize: scale(8), color: '#64748b', marginTop: scale(1) },
-  
-  card: { backgroundColor: '#fff', borderRadius: scale(10), padding: scale(10), marginBottom: scale(8), flexDirection: 'row', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 },
-  
-  searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: scale(8), paddingHorizontal: scale(10), height: scale(38), marginBottom: scale(8), shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 5, elevation: 2 },
-  searchInput: { flex: 1, fontSize: scale(12), color: '#0f172a' },
-  
-  dropdownsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: scale(8) },
-  dropdownBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', paddingHorizontal: scale(6), paddingVertical: scale(6), borderRadius: scale(6), borderWidth: 1, borderColor: '#e2e8f0' },
-  dropdownLabel: { fontSize: scale(11), color: '#475569', marginRight: scale(4), fontWeight: '500' },
-  
-  chipsScroll: { marginBottom: scale(20) },
-  chipsContainer: { flexDirection: 'row', gap: scale(8), paddingRight: scale(16) },
-  chip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(16), paddingVertical: scale(8), borderRadius: scale(8), borderWidth: 1 },
-  chipText: { fontSize: scale(12), fontWeight: '600' },
-  
-  cardLeft: { marginRight: scale(12) },
-  docIconWrapper: { width: scale(44), height: scale(48), borderRadius: scale(8), borderWidth: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fafafa' },
-  typeBadge: { position: 'absolute', bottom: -scale(6), paddingHorizontal: scale(6), paddingVertical: scale(2), borderRadius: scale(4) },
-  typeBadgeText: { color: '#fff', fontSize: scale(8), fontWeight: 'bold' },
-  cardCenter: { flex: 1, justifyContent: 'center' },
-  cardTitle: { fontSize: scale(13), fontWeight: '700', color: '#0f172a', marginBottom: scale(4) },
-  cardSubtitle: { fontSize: scale(10), color: '#64748b', marginBottom: scale(8) },
-  blueLabel: { color: '#1d4ed8', fontWeight: '600' },
-  cardMetaRow: { flexDirection: 'row', alignItems: 'center' },
-  metaText: { fontSize: scale(9), color: '#94a3b8', marginLeft: scale(4) },
-  cardRight: { justifyContent: 'space-between', alignItems: 'flex-end', marginLeft: scale(8) },
-  btnViewDownload: { paddingHorizontal: scale(12), paddingVertical: scale(8), borderRadius: scale(6), backgroundColor: '#1d4ed8' },
-  btnViewDownloadText: { color: '#fff', fontSize: scale(10), fontWeight: '600' },
-  
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
-  modalContent: { width: '80%', backgroundColor: '#fff', borderRadius: scale(12), padding: scale(16), maxHeight: '80%' },
-  modalTitle: { fontSize: scale(16), fontWeight: 'bold', marginBottom: scale(12), color: '#1e293b' },
-  modalOption: { flexDirection: 'row', alignItems: 'center', paddingVertical: scale(12), borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
-  modalOptionText: { fontSize: scale(14), fontWeight: '500' },
-  colorDot: { width: scale(10), height: scale(10), borderRadius: scale(5), marginRight: scale(8) },
-  
-  viewModalContainer: { flex: 1, backgroundColor: 'rgba(15,23,42,0.6)', justifyContent: 'flex-end' },
-  viewModalSafeArea: { backgroundColor: '#fff', borderTopLeftRadius: scale(24), borderTopRightRadius: scale(24), height: height * 0.85 },
-  viewModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: scale(20), paddingVertical: scale(16), borderBottomWidth: 1, borderBottomColor: '#e2e8f0' },
-  viewModalHeaderTitle: { fontSize: scale(16), fontWeight: '700', color: '#0f172a', flex: 1, marginRight: scale(12) },
-  closeBtn: { padding: scale(4), backgroundColor: '#f1f5f9', borderRadius: scale(20) },
-  viewModalBody: { flex: 1, padding: scale(20) },
-  viewModalMeta: { flexDirection: 'row', gap: scale(8), marginBottom: scale(16) },
-  viewModalMetaBadge: { paddingHorizontal: scale(10), paddingVertical: scale(4), borderRadius: scale(6), backgroundColor: '#e0e7ff' },
-  viewModalMetaBadgeText: { fontSize: scale(11), fontWeight: '600', color: '#4338ca' },
-  richTextContainer: { backgroundColor: '#f8fafc', padding: scale(16), borderRadius: scale(12), borderWidth: 1, borderColor: '#f1f5f9' }
+  headerBtn:   { padding: scale(2) },
+  headerTitle: { fontSize: scale(17), fontWeight: '700', letterSpacing: -0.2 },
+  headerSub:   { fontSize: scale(11), marginTop: scale(1) },
+  unreadPill:  { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(8), paddingVertical: scale(4), borderRadius: scale(20), borderWidth: 1, gap: scale(4) },
+  unreadDot:   { width: scale(6), height: scale(6), borderRadius: scale(3) },
+  unreadPillTxt: { fontSize: scale(10), fontWeight: '700' },
+
+  /* List */
+  listContent: { paddingHorizontal: scale(14), paddingTop: scale(14) },
+
+  /* Stats */
+  statsRow:    { flexDirection: 'row', gap: scale(8), marginBottom: scale(12) },
+  statChip:    { flex: 1, alignItems: 'center', borderRadius: scale(10), paddingVertical: scale(10), borderWidth: 1, elevation: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 2 },
+  statIconBox: { width: scale(32), height: scale(32), borderRadius: scale(8), justifyContent: 'center', alignItems: 'center', marginBottom: scale(4) },
+  statVal:     { fontSize: scale(18), fontWeight: '800', letterSpacing: -0.5 },
+  statLbl:     { fontSize: scale(9),  fontWeight: '500', marginTop: scale(1) },
+
+  /* Search */
+  searchBox:   { flexDirection: 'row', alignItems: 'center', borderRadius: scale(8), paddingHorizontal: scale(12), height: scale(42), marginBottom: scale(10), borderWidth: 1, elevation: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.03, shadowRadius: 2 },
+  searchInput: { flex: 1, fontSize: scale(13) },
+
+  /* Filters */
+  filterRow:     { flexDirection: 'row', gap: scale(8), marginBottom: scale(6), alignItems: 'center' },
+  filterBtn:     { flex: 1, flexDirection: 'row', alignItems: 'center', height: scale(38), borderRadius: scale(8), paddingHorizontal: scale(10), borderWidth: 1 },
+  filterBtnTxt:  { flex: 1, fontSize: scale(12), marginRight: scale(2) },
+  clearBtn:      { width: scale(38), height: scale(38), borderRadius: scale(8), borderWidth: 1, justifyContent: 'center', alignItems: 'center' },
+  resultLine:    { fontSize: scale(11), fontWeight: '500', marginBottom: scale(10) },
+
+  /* Card */
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: scale(10),
+    padding: scale(12),
+    marginBottom: scale(8),
+    borderWidth: 1,
+    borderLeftWidth: 3,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+  },
+  cardIconWrap: { width: scale(44), height: scale(48), borderRadius: scale(10), justifyContent: 'center', alignItems: 'center', marginRight: scale(12), position: 'relative' },
+  typePill:     { position: 'absolute', bottom: -scale(5), paddingHorizontal: scale(4), paddingVertical: scale(1), borderRadius: scale(3) },
+  typePillTxt:  { color: '#fff', fontSize: scale(7), fontWeight: '800', letterSpacing: 0.3 },
+  cardBody:     { flex: 1 },
+  cardTitle:    { fontSize: scale(13), fontWeight: '700', lineHeight: scale(18), marginBottom: scale(6) },
+  newBadge:     { paddingHorizontal: scale(5), paddingVertical: scale(2), borderRadius: scale(4), marginLeft: scale(6) },
+  newBadgeTxt:  { color: '#fff', fontSize: scale(8), fontWeight: '800', letterSpacing: 0.5 },
+  badgeRow:     { flexDirection: 'row', flexWrap: 'wrap', gap: scale(5), marginBottom: scale(6) },
+  badge:        { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(6), paddingVertical: scale(3), borderRadius: scale(4) },
+  badgeTxt:     { fontSize: scale(10), fontWeight: '600' },
+  metaRow:      { flexDirection: 'row', alignItems: 'center' },
+  metaTxt:      { fontSize: scale(10), marginLeft: scale(3) },
+
+  /* Empty */
+  empty:          { alignItems: 'center', paddingTop: scale(50), paddingBottom: scale(30) },
+  emptyIconWrap:  { width: scale(72), height: scale(72), borderRadius: scale(20), justifyContent: 'center', alignItems: 'center', marginBottom: scale(14) },
+  emptyTitle:     { fontSize: scale(15), fontWeight: '700', marginBottom: scale(6) },
+  emptySub:       { fontSize: scale(12), textAlign: 'center', lineHeight: scale(18), maxWidth: '75%' },
+  clearFiltersBtn:  { marginTop: scale(16), paddingHorizontal: scale(20), paddingVertical: scale(10), borderRadius: scale(8), borderWidth: 1 },
+  clearFiltersBtnTxt: { fontSize: scale(13), fontWeight: '700' },
+
+  /* Bottom sheet shared (picker) */
+  sheetOverlay:   { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+  sheet:          { borderTopLeftRadius: scale(20), borderTopRightRadius: scale(20), paddingHorizontal: scale(16), paddingBottom: scale(8) },
+  sheetHandle:    { width: scale(38), height: scale(4), borderRadius: scale(2), alignSelf: 'center', marginTop: scale(10), marginBottom: scale(12) },
+  sheetHeader:    { flexDirection: 'row', alignItems: 'center', paddingBottom: scale(12), borderBottomWidth: StyleSheet.hairlineWidth, marginBottom: scale(4) },
+  sheetTitle:     { flex: 1, fontSize: scale(16), fontWeight: '700' },
+  sheetOption:    { flexDirection: 'row', alignItems: 'center', paddingVertical: scale(13), borderBottomWidth: StyleSheet.hairlineWidth, gap: scale(10) },
+  sheetOptionTxt: { fontSize: scale(14) },
+  dot:            { width: scale(10), height: scale(10), borderRadius: scale(5) },
+
+  /* ── Detail popup ── */
+  popupOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: scale(16),
+  },
+  popupCard: {
+    width: '100%',
+    maxHeight: height * 0.82,
+    borderRadius: scale(18),
+    overflow: 'hidden',
+    elevation: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.22,
+    shadowRadius: 20,
+  },
+  popupAccentBar:  { height: scale(4), width: '100%' },
+  popupHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: scale(14),
+    paddingBottom: scale(12),
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: scale(10),
+  },
+  popupIconBox:    { width: scale(44), height: scale(44), borderRadius: scale(12), justifyContent: 'center', alignItems: 'center', flexShrink: 0 },
+  popupTypePill:   { alignSelf: 'flex-start', paddingHorizontal: scale(7), paddingVertical: scale(2), borderRadius: scale(5), marginBottom: scale(4) },
+  popupTypePillTxt:{ color: '#fff', fontSize: scale(9), fontWeight: '800', letterSpacing: 0.5 },
+  popupTitle:      { fontSize: scale(15), fontWeight: '700', lineHeight: scale(22) },
+  popupCloseBtn:   { width: scale(34), height: scale(34), borderRadius: scale(17), justifyContent: 'center', alignItems: 'center', flexShrink: 0 },
+  popupMetaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: scale(6),
+    paddingHorizontal: scale(14),
+    paddingVertical: scale(10),
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  popupMetaBadge:  { flexDirection: 'row', alignItems: 'center', gap: scale(4), paddingHorizontal: scale(8), paddingVertical: scale(5), borderRadius: scale(8) },
+  popupMetaTxt:    { fontSize: scale(11), fontWeight: '600' },
+  popupScroll:     { maxHeight: height * 0.40 },
+  popupBody:       { padding: scale(14) },
+  popupSectionLabel: { fontSize: scale(10), fontWeight: '700', letterSpacing: 0.8, marginBottom: scale(8) },
+  popupFooter: {
+    padding: scale(12),
+    borderTopWidth: StyleSheet.hairlineWidth,
+    alignItems: 'center',
+  },
+  popupDoneBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    paddingVertical: scale(12),
+    borderRadius: scale(10),
+  },
+  popupDoneTxt:    { color: '#fff', fontSize: scale(14), fontWeight: '700' },
+  richBox:         { padding: scale(14), borderRadius: scale(12), borderWidth: 1, minHeight: scale(60) },
 });
+
+export default LibraryScreen;

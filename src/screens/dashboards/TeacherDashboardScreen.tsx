@@ -21,6 +21,7 @@ import { selectUnreadMessagesCount, loadLastReadTimestamp, initMessagesListener 
 import { fetchTeacherAssignments } from '../../store/slices/assignmentsSlice';
 import { initAppSettingsListener } from '../../store/slices/appSettingsSlice';
 import { initNotificationsListener } from '../../store/slices/notificationsSlice';
+import { fetchAllAttendanceRecords } from '../../store/slices/attendanceSlice';
 
 const { width } = Dimensions.get('window');
 
@@ -94,10 +95,11 @@ export const TeacherDashboardScreen: React.FC = () => {
       initMessagesListener(dispatch, profileData),
     ];
     dispatch(loadLastReadTimestamp());
+    dispatch(fetchAllAttendanceRecords());
     
-    const teacherName = (profileData?.fullname || user?.displayName || '').trim().toLowerCase();
-    if (teacherName) {
-      dispatch(fetchTeacherAssignments({ teacherName, forceRefresh: false }));
+    const rawTeacherName = profileData?.fullname || user?.displayName || 'Teacher';
+    if (rawTeacherName) {
+      dispatch(fetchTeacherAssignments({ teacherName: rawTeacherName, forceRefresh: false }));
     }
 
     unsubsRef.current = unsubs;
@@ -124,11 +126,10 @@ export const TeacherDashboardScreen: React.FC = () => {
       initMessagesListener(dispatch, profileData),
     ];
     dispatch(loadLastReadTimestamp());
+    dispatch(fetchAllAttendanceRecords());
     
-    const teacherName = (profileData?.fullname || user?.displayName || '').trim().toLowerCase();
-    if (teacherName) {
-      dispatch(fetchTeacherAssignments({ teacherName, forceRefresh: true }));
-    }
+    const rawTeacherName = profileData?.fullname || user?.displayName || 'Teacher';
+    dispatch(fetchTeacherAssignments({ teacherName: rawTeacherName, forceRefresh: true }));
 
     await new Promise(resolve => setTimeout(resolve, 800));
     setRefreshing(false);
@@ -139,11 +140,11 @@ export const TeacherDashboardScreen: React.FC = () => {
   
   const teacherUniqueClassesCount = React.useMemo(() => {
     const classesSet = new Set<string>();
-    const teacherName = (profileData?.fullname || user?.displayName || '').trim().toLowerCase();
-    if (!teacherName) return 0;
+    const teacherNameLower = (profileData?.fullname || user?.displayName || '').trim().toLowerCase();
+    if (!teacherNameLower) return 0;
     Object.values(timetableData).forEach(arr => {
       arr.forEach(session => {
-        if ((session.instructor || '').trim().toLowerCase() === teacherName) {
+        if ((session.instructor || '').trim().toLowerCase() === teacherNameLower) {
           const className = (session.className || (session as any).class || '').trim();
           if (className) classesSet.add(className);
         }
@@ -168,6 +169,7 @@ export const TeacherDashboardScreen: React.FC = () => {
   }, [timetableData, profileData?.fullname, user?.displayName]);
 
   const unreadNotices = useAppSelector(selectUnreadNotices);
+  const totalLibraryItems = useAppSelector((state: RootState) => state.notifications.notices.length);
   const unreadMessagesCount = useAppSelector(selectUnreadMessagesCount);
   const totalMessages = useAppSelector(selectTotalMessages);
   const totalNotifications = unreadNotices + unreadMessagesCount;
@@ -176,15 +178,48 @@ export const TeacherDashboardScreen: React.FC = () => {
   const assignments = useAppSelector(s => s.assignments?.assignments || []);
   const assignmentsLoading = useAppSelector(s => s.assignments?.isLoading);
 
-  const studentsToday = React.useMemo(() => {
-    if (!todaysSchedule || todaysSchedule.length === 0) return 0;
-    const classesToday = new Set(todaysSchedule.map(s => s.className));
-    let count = 0;
-    students.forEach(s => {
-       if (s.class && classesToday.has(s.class)) count++;
+  // Attendance from Redux adminDb — keyed by studentId => { date => status }
+  const attendanceDb = useAppSelector(s => s.attendance.adminDb);
+  const attendanceLoading = useAppSelector(s => s.attendance.adminLoading);
+
+  // Compute today's present count across all classes the teacher teaches
+  const todaysPresentCount = React.useMemo(() => {
+    const teacherNameLower = (profileData?.fullname || user?.displayName || '').trim().toLowerCase();
+    if (!teacherNameLower) return 0;
+
+    // 1. Collect all classes assigned to this teacher in the timetable
+    const teacherClassesSet = new Set<string>();
+    Object.values(timetableData).forEach(arr => {
+      arr.forEach(session => {
+        if ((session.instructor || '').trim().toLowerCase() === teacherNameLower) {
+          const cls = (session.className || (session as any).class || '').trim().toLowerCase();
+          if (cls) teacherClassesSet.add(cls);
+        }
+      });
     });
-    return count;
-  }, [todaysSchedule, students]);
+
+    if (teacherClassesSet.size === 0) return 0;
+
+    // 2. Build a set of studentIds whose class matches the teacher's classes
+    const teacherStudentIds = new Set<string>();
+    students.forEach(s => {
+      const cls = (s.class || (s as any).grade || '').trim().toLowerCase();
+      if (cls && teacherClassesSet.has(cls)) {
+        const sid = s.uid?.trim() || s.authUid?.trim() || s.id;
+        if (sid) teacherStudentIds.add(sid);
+      }
+    });
+
+    if (teacherStudentIds.size === 0) return 0;
+
+    // 3. Count how many of those students are marked 'present' today
+    const todayStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    let presentCount = 0;
+    teacherStudentIds.forEach(sid => {
+      if (attendanceDb[sid]?.[todayStr] === 'present') presentCount++;
+    });
+    return presentCount;
+  }, [timetableData, students, attendanceDb, profileData?.fullname, user?.displayName]);
 
   const prevNoticesRef = useRef(unreadNotices);
   const prevMessagesRef = useRef(unreadMessagesCount);
@@ -306,42 +341,172 @@ export const TeacherDashboardScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
 
-          {/* Side Menu Drawer (Modal) */}
-          <Modal visible={showSideMenu} transparent animationType="fade">
+          {/* ─── Professional Side Drawer ─── */}
+          <Modal visible={showSideMenu} transparent animationType="slide" statusBarTranslucent>
             <View style={{ flex: 1, flexDirection: 'row' }}>
+              {/* Backdrop */}
               <TouchableWithoutFeedback onPress={() => setShowSideMenu(false)}>
-                <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }} />
+                <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.48)' }} />
               </TouchableWithoutFeedback>
-              
-              <View style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: scale(260), backgroundColor: theme.card, shadowColor: '#000', shadowOffset: { width: 4, height: 0 }, shadowOpacity: 0.15, shadowRadius: 15, elevation: 15, zIndex: 10000, borderTopRightRadius: scale(24), borderBottomRightRadius: scale(24), overflow: 'hidden' }}>
+
+              {/* Drawer panel */}
+              <View style={{
+                position: 'absolute', top: 0, bottom: 0, left: 0,
+                width: scale(252),
+                backgroundColor: theme.card,
+                borderTopRightRadius: scale(20),
+                borderBottomRightRadius: scale(20),
+                shadowColor: '#000', shadowOffset: { width: 6, height: 0 },
+                shadowOpacity: 0.18, shadowRadius: 16, elevation: 18,
+                overflow: 'hidden',
+              }}>
                 <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-                  <View style={{ padding: scale(16), paddingTop: scale(24), borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.border, flexDirection: 'row', alignItems: 'center' }}>
-                    <Image source={displayImage ? { uri: displayImage } : require('../../../assets/icon.png')} style={{ width: scale(46), height: scale(46), borderRadius: scale(23), marginRight: scale(12) }} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: scale(15), fontWeight: '700', color: theme.text }} numberOfLines={1}>{displayName}</Text>
-                      <View style={{ backgroundColor: isDark ? 'rgba(59,130,246,0.15)' : '#eff6ff', paddingHorizontal: scale(8), paddingVertical: scale(3), borderRadius: scale(10), alignSelf: 'flex-start', marginTop: scale(4) }}>
-                        <Text style={{ fontSize: scale(10), color: theme.primary || '#3b82f6', fontWeight: '700' }} numberOfLines={1}>{displayRole}</Text>
+
+                  {/* ── Avatar / Profile header ── */}
+                  <View style={{
+                    backgroundColor: isDark ? '#0f172a' : '#1e3a8a',
+                    paddingHorizontal: scale(16), paddingTop: scale(20), paddingBottom: scale(16),
+                  }}>
+                    {/* Institute name row */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: scale(14) }}>
+                      <Image
+                        source={require('../../../assets/the-seeks-logo.png')}
+                        style={{ width: scale(26), height: scale(26), resizeMode: 'contain', marginRight: scale(8) }}
+                      />
+                      <View>
+                        <Text style={{ color: '#fff', fontSize: scale(12), fontWeight: '800', letterSpacing: 0.2 }}>The Seeks Academy</Text>
+                        <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: scale(9), fontWeight: '500' }}>{academicYearText}</Text>
+                      </View>
+                    </View>
+
+                    {/* Teacher info row */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Image
+                        source={displayImage ? { uri: displayImage } : require('../../../assets/icon.png')}
+                        style={{ width: scale(42), height: scale(42), borderRadius: scale(21), marginRight: scale(10), borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)' }}
+                      />
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: '#fff', fontSize: scale(13), fontWeight: '700', marginBottom: scale(3) }} numberOfLines={1}>{displayName}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(6) }}>
+                          <View style={{ backgroundColor: 'rgba(255,255,255,0.18)', paddingHorizontal: scale(7), paddingVertical: scale(2), borderRadius: scale(10) }}>
+                            <Text style={{ color: '#fff', fontSize: scale(9), fontWeight: '700', letterSpacing: 0.3 }}>{displayRole.toUpperCase()}</Text>
+                          </View>
+                        </View>
+                        {!!profileData?.class && (
+                          <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: scale(9), marginTop: scale(2) }} numberOfLines={1}>{profileData.class}</Text>
+                        )}
                       </View>
                     </View>
                   </View>
-                  
-                  <ScrollView style={{ flex: 1, paddingVertical: scale(6) }}>
-                    <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: scale(12), paddingHorizontal: scale(16) }} onPress={() => { setShowSideMenu(false); handleNavigate('ProfileScreen'); }}>
-                      <Ionicons name="person-outline" size={scale(18)} color={theme.textSecondary} />
-                      <Text style={{ fontSize: scale(13), fontWeight: '500', color: theme.text, marginLeft: scale(12) }}>Profile</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: scale(12), paddingHorizontal: scale(16) }} onPress={() => { setShowSideMenu(false); handleNavigate('SettingsScreen'); }}>
-                      <Ionicons name="settings-outline" size={scale(18)} color={theme.textSecondary} />
-                      <Text style={{ fontSize: scale(13), fontWeight: '500', color: theme.text, marginLeft: scale(12) }}>Settings</Text>
+
+                  {/* ── Navigation sections ── */}
+                  <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: scale(8) }}>
+
+                    {/* ACADEMIC */}
+                    <View style={{ paddingHorizontal: scale(16), paddingTop: scale(14), paddingBottom: scale(4) }}>
+                      <Text style={{ fontSize: scale(9), fontWeight: '700', color: theme.placeholder, letterSpacing: 1.0 }}>ACADEMIC</Text>
+                    </View>
+                    {[
+                      { icon: 'time-outline',          label: 'Timetable',    screen: 'AdminTimetable',              color: '#10b981' },
+                      { icon: 'people-outline',        label: 'Attendance',   screen: 'AttendanceClassesListScreen', color: '#f43f5e' },
+                      { icon: 'clipboard-outline',     label: 'Assignments',  screen: 'TeacherAssignmentsScreen',    color: '#ec4899' },
+                      { icon: 'document-text-outline', label: 'Exams',        screen: 'ClassesListScreen',           color: '#8b5cf6' },
+                      { icon: 'library-outline',       label: 'e-Library',    screen: 'LibraryScreen',              color: '#f59e0b' },
+                      { icon: 'book-outline',          label: 'Diary',        screen: 'DiaryScreen',                color: '#3b82f6' },
+                    ].map(item => (
+                      <TouchableOpacity
+                        key={item.screen}
+                        style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: scale(10), paddingHorizontal: scale(16) }}
+                        activeOpacity={0.7}
+                        onPress={() => { setShowSideMenu(false); handleNavigate(item.screen); }}
+                      >
+                        <View style={{ width: scale(30), height: scale(30), borderRadius: scale(8), backgroundColor: isDark ? item.color + '22' : item.color + '14', justifyContent: 'center', alignItems: 'center', marginRight: scale(12) }}>
+                          <Ionicons name={item.icon as any} size={scale(16)} color={item.color} />
+                        </View>
+                        <Text style={{ flex: 1, fontSize: scale(13), fontWeight: '500', color: theme.text }}>{item.label}</Text>
+                        <Ionicons name="chevron-forward" size={scale(13)} color={theme.placeholder} />
+                      </TouchableOpacity>
+                    ))}
+
+                    {/* Divider */}
+                    <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: theme.border, marginHorizontal: scale(16), marginVertical: scale(8) }} />
+
+                    {/* COMMUNICATION */}
+                    <View style={{ paddingHorizontal: scale(16), paddingBottom: scale(4) }}>
+                      <Text style={{ fontSize: scale(9), fontWeight: '700', color: theme.placeholder, letterSpacing: 1.0 }}>COMMUNICATION</Text>
+                    </View>
+                    {[
+                      { icon: 'mail-outline',     label: 'Messages',    screen: 'MessagesScreen',          color: '#0ea5e9' },
+                      { icon: 'bulb-outline',     label: 'Suggestions', screen: 'TeacherSuggestionsScreen', color: '#f59e0b' },
+                    ].map(item => (
+                      <TouchableOpacity
+                        key={item.screen}
+                        style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: scale(10), paddingHorizontal: scale(16) }}
+                        activeOpacity={0.7}
+                        onPress={() => { setShowSideMenu(false); handleNavigate(item.screen); }}
+                      >
+                        <View style={{ width: scale(30), height: scale(30), borderRadius: scale(8), backgroundColor: isDark ? item.color + '22' : item.color + '14', justifyContent: 'center', alignItems: 'center', marginRight: scale(12) }}>
+                          <Ionicons name={item.icon as any} size={scale(16)} color={item.color} />
+                        </View>
+                        <Text style={{ flex: 1, fontSize: scale(13), fontWeight: '500', color: theme.text }}>{item.label}</Text>
+                        <Ionicons name="chevron-forward" size={scale(13)} color={theme.placeholder} />
+                      </TouchableOpacity>
+                    ))}
+
+                    {/* Divider */}
+                    <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: theme.border, marginHorizontal: scale(16), marginVertical: scale(8) }} />
+
+                    {/* ACCOUNT */}
+                    <View style={{ paddingHorizontal: scale(16), paddingBottom: scale(4) }}>
+                      <Text style={{ fontSize: scale(9), fontWeight: '700', color: theme.placeholder, letterSpacing: 1.0 }}>ACCOUNT</Text>
+                    </View>
+                    {[
+                      { icon: 'person-outline',   label: 'My Profile', screen: 'ProfileScreen',  color: '#64748b' },
+                      { icon: 'settings-outline', label: 'Settings',   screen: 'SettingsScreen', color: '#64748b' },
+                    ].map(item => (
+                      <TouchableOpacity
+                        key={item.screen}
+                        style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: scale(10), paddingHorizontal: scale(16) }}
+                        activeOpacity={0.7}
+                        onPress={() => { setShowSideMenu(false); handleNavigate(item.screen); }}
+                      >
+                        <View style={{ width: scale(30), height: scale(30), borderRadius: scale(8), backgroundColor: isDark ? '#1e293b' : '#f1f5f9', justifyContent: 'center', alignItems: 'center', marginRight: scale(12) }}>
+                          <Ionicons name={item.icon as any} size={scale(16)} color={isDark ? theme.placeholder : '#475569'} />
+                        </View>
+                        <Text style={{ flex: 1, fontSize: scale(13), fontWeight: '500', color: theme.text }}>{item.label}</Text>
+                        <Ionicons name="chevron-forward" size={scale(13)} color={theme.placeholder} />
+                      </TouchableOpacity>
+                    ))}
+
+                    {/* Dark mode toggle row */}
+                    <TouchableOpacity
+                      style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: scale(10), paddingHorizontal: scale(16) }}
+                      activeOpacity={0.7}
+                      onPress={toggleTheme}
+                    >
+                      <View style={{ width: scale(30), height: scale(30), borderRadius: scale(8), backgroundColor: isDark ? '#1e293b' : '#f1f5f9', justifyContent: 'center', alignItems: 'center', marginRight: scale(12) }}>
+                        <Ionicons name={isDark ? 'sunny-outline' : 'moon-outline'} size={scale(16)} color={isDark ? '#f59e0b' : '#475569'} />
+                      </View>
+                      <Text style={{ flex: 1, fontSize: scale(13), fontWeight: '500', color: theme.text }}>{isDark ? 'Light Mode' : 'Dark Mode'}</Text>
+                      <View style={{ width: scale(36), height: scale(20), borderRadius: scale(10), backgroundColor: isDark ? theme.primary : '#e2e8f0', justifyContent: 'center', paddingHorizontal: scale(2) }}>
+                        <View style={{ width: scale(16), height: scale(16), borderRadius: scale(8), backgroundColor: '#fff', alignSelf: isDark ? 'flex-end' : 'flex-start', elevation: 2 }} />
+                      </View>
                     </TouchableOpacity>
                   </ScrollView>
-                  
-                  <View style={{ padding: scale(14), borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.border }}>
-                    <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(2) }} onPress={handleLogout}>
+
+                  {/* ── Logout footer ── */}
+                  <View style={{ paddingHorizontal: scale(14), paddingVertical: scale(12), borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.border }}>
+                    <TouchableOpacity
+                      style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? '#ef444415' : '#fef2f2', borderRadius: scale(10), paddingVertical: scale(11), paddingHorizontal: scale(14), borderWidth: 1, borderColor: '#ef444430' }}
+                      activeOpacity={0.75}
+                      onPress={handleLogout}
+                    >
                       <Ionicons name="log-out-outline" size={scale(18)} color="#ef4444" />
-                      <Text style={{ fontSize: scale(13), fontWeight: '600', color: '#ef4444', marginLeft: scale(12) }}>Log Out</Text>
+                      <Text style={{ flex: 1, fontSize: scale(13), fontWeight: '700', color: '#ef4444', marginLeft: scale(10) }}>Sign Out</Text>
+                      <Ionicons name="chevron-forward" size={scale(14)} color="#ef444480" />
                     </TouchableOpacity>
                   </View>
+
                 </SafeAreaView>
               </View>
             </View>
@@ -434,7 +599,7 @@ export const TeacherDashboardScreen: React.FC = () => {
           </View>
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.overviewScroll}>
-            {/* Card 1 */}
+            {/* Card 1 — Classes Today (from timetable Redux) */}
             <TouchableOpacity 
               activeOpacity={0.7}
               onPress={() => handleNavigate('AdminTimetable')}
@@ -443,24 +608,32 @@ export const TeacherDashboardScreen: React.FC = () => {
               <View style={[styles.overviewIconWrap, { backgroundColor: isDark ? 'rgba(168,85,247,0.1)' : '#f3e8ff' }]}>
                 <Ionicons name="calendar" size={18} color="#a855f7" />
               </View>
-              <Text style={[styles.overviewValue, { color: theme.text }]}>{todaysSchedule.length}</Text>
+              {timetableLoading
+                ? <ActivityIndicator size="small" color="#a855f7" style={{ marginVertical: scale(4) }} />
+                : <Text style={[styles.overviewValue, { color: theme.text }]}>{todaysSchedule.length}</Text>
+              }
               <Text style={[styles.overviewLabel, { color: theme.textSecondary }]}>Classes Today</Text>
               <Text style={[styles.overviewStatus, { color: '#a855f7' }]}>Scheduled</Text>
             </TouchableOpacity>
-            {/* Card 2 */}
+
+            {/* Card 2 — Present Today (real attendance from Redux attendanceDb) */}
             <TouchableOpacity 
               activeOpacity={0.7}
-              onPress={() => handleNavigate('ClassesListScreen')}
+              onPress={() => handleNavigate('AttendanceClassesListScreen')}
               style={[styles.overviewCard, { backgroundColor: isDark ? theme.card : '#f0fdf4', borderColor: isDark ? theme.border : '#dcfce7' }]}
             >
               <View style={[styles.overviewIconWrap, { backgroundColor: isDark ? 'rgba(34,197,94,0.1)' : '#dcfce7' }]}>
                 <Ionicons name="people" size={18} color="#22c55e" />
               </View>
-              <Text style={[styles.overviewValue, { color: theme.text }]}>{studentsToday}</Text>
-              <Text style={[styles.overviewLabel, { color: theme.textSecondary }]}>My Classes</Text>
-              <Text style={[styles.overviewStatus, { color: '#22c55e' }]}>Active</Text>
+              {attendanceLoading
+                ? <ActivityIndicator size="small" color="#22c55e" style={{ marginVertical: scale(4) }} />
+                : <Text style={[styles.overviewValue, { color: theme.text }]}>{todaysPresentCount}</Text>
+              }
+              <Text style={[styles.overviewLabel, { color: theme.textSecondary }]}>Present Today</Text>
+              <Text style={[styles.overviewStatus, { color: '#22c55e' }]}>Attendance</Text>
             </TouchableOpacity>
-            {/* Card 3 */}
+
+            {/* Card 3 — Total Assignments (from assignmentsSlice Redux) */}
             <TouchableOpacity 
               activeOpacity={0.7}
               onPress={() => handleNavigate('TeacherAssignmentsScreen')}
@@ -469,22 +642,26 @@ export const TeacherDashboardScreen: React.FC = () => {
               <View style={[styles.overviewIconWrap, { backgroundColor: isDark ? 'rgba(249,115,22,0.1)' : '#ffedd5' }]}>
                 <Ionicons name="clipboard" size={18} color="#f97316" />
               </View>
-              <Text style={[styles.overviewValue, { color: theme.text }]}>{assignments.length}</Text>
+              {assignmentsLoading
+                ? <ActivityIndicator size="small" color="#f97316" style={{ marginVertical: scale(4) }} />
+                : <Text style={[styles.overviewValue, { color: theme.text }]}>{assignments.length}</Text>
+              }
               <Text style={[styles.overviewLabel, { color: theme.textSecondary }]}>Total Assignments</Text>
               <Text style={[styles.overviewStatus, { color: '#f97316' }]}>Active</Text>
             </TouchableOpacity>
-            {/* Card 4 */}
+
+            {/* Card 4 — e-Library (total materials from notificationsSlice Redux) */}
             <TouchableOpacity 
               activeOpacity={0.7}
               onPress={() => handleNavigate('LibraryScreen')}
               style={[styles.overviewCard, { backgroundColor: isDark ? theme.card : '#eff6ff', borderColor: isDark ? theme.border : '#dbeafe' }]}
             >
               <View style={[styles.overviewIconWrap, { backgroundColor: isDark ? 'rgba(59,130,246,0.1)' : '#dbeafe' }]}>
-                <Ionicons name="notifications" size={20} color="#3b82f6" />
+                <Ionicons name="library" size={18} color="#3b82f6" />
               </View>
-              <Text style={[styles.overviewValue, { color: theme.text }]}>{unreadNotices}</Text>
+              <Text style={[styles.overviewValue, { color: theme.text }]}>{totalLibraryItems}</Text>
               <Text style={[styles.overviewLabel, { color: theme.textSecondary }]}>e-Library</Text>
-              <Text style={[styles.overviewStatus, { color: '#3b82f6' }]}>New Resources</Text>
+              <Text style={[styles.overviewStatus, { color: '#3b82f6' }]}>{unreadNotices > 0 ? `${unreadNotices} New` : 'Materials'}</Text>
             </TouchableOpacity>
           </ScrollView>
 
@@ -762,16 +939,16 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    marginLeft: scale(10),
+    marginLeft: scale(5),
   },
   headerLogo: {
-    width: scale(38),
-    height: scale(38),
-    marginRight: scale(10),
+    width: scale(44),
+    height: scale(44),
+    marginRight: scale(2),
   },
   headerTitle: {
     color: '#fff',
-    fontSize: scale(16),
+    fontSize: scale(18),
     fontWeight: '700',
     letterSpacing: 0.2,
   },
