@@ -236,12 +236,12 @@ export const LibraryScreen: React.FC = () => {
           { icon: 'book-outline',        color: '#8b5cf6',      val: subjCount,  lbl: 'Subjects'  },
           { icon: 'school-outline',      color: '#10b981',      val: classCount, lbl: 'Classes'   },
         ] as any[]).map(({ icon, color, val, lbl }) => (
-          <View key={lbl} style={[styles.statChip, { backgroundColor: theme.card, borderColor: theme.border }]}>
-            <View style={[styles.statIconBox, { backgroundColor: isDark ? color + '25' : color + '14' }]}>
+          <View key={lbl} style={[styles.statChip, { backgroundColor: isDark ? theme.card : color + '10', borderColor: isDark ? theme.border : color + '25', borderWidth: 1 }]}>
+            <View style={[styles.statIconBox, { backgroundColor: isDark ? color + '25' : '#fff', shadowColor: color, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3, elevation: 2 }]}>
               <Ionicons name={icon} size={scale(16)} color={color} />
             </View>
-            <Text style={[styles.statVal, { color: theme.text }]}>{val}</Text>
-            <Text style={[styles.statLbl, { color: theme.placeholder }]}>{lbl}</Text>
+            <Text style={[styles.statVal, { color: isDark ? theme.text : color }]}>{val}</Text>
+            <Text style={[styles.statLbl, { color: isDark ? theme.placeholder : color, opacity: isDark ? 1 : 0.8 }]}>{lbl}</Text>
           </View>
         ))}
       </View>

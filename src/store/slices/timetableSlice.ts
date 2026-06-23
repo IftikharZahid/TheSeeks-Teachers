@@ -14,6 +14,7 @@ export interface TimetableClass {
     period: string;
     class: string;
     type: string;
+    gender?: string;
 }
 
 export interface TimetableEntry {
@@ -61,6 +62,7 @@ export const subscribeTimetable = createAsyncThunk(
                                     period: cls.period || '',
                                     class: cls.class || '',
                                     type: cls.type || 'LECTURE',
+                                    gender: cls.gender || '',
                                     // Attach the day for filtering
                                     ...(day ? { day } : {}),
                                 } as any);

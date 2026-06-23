@@ -17,15 +17,22 @@ export const ProfileScreen: React.FC = () => {
   
   const profileData = useAppSelector((s: any) => s.auth.profile);
   const user = useAppSelector((s: any) => s.auth.user);
+  const teachersList = useAppSelector((s: any) => s.teachers?.list || []);
 
-  const displayName = profileData?.fullname || user?.displayName || 'Teacher';
-  const displayEmail = profileData?.email || user?.email || 'N/A';
-  const displayRole = profileData?.role ? profileData.role.charAt(0).toUpperCase() + profileData.role.slice(1) : 'Teacher';
-  const displaySubject = profileData?.class || 'N/A';
-  const displayQualification = profileData?.section || 'N/A';
-  const displayExperience = profileData?.session || 'N/A';
-  const displayPhone = profileData?.phone || 'N/A';
-  const displayImage = profileData?.image?.trim() ? profileData.image : user?.photoURL?.trim() ? user.photoURL : null;
+  const currentTeacher = React.useMemo(() => {
+    if (!profileData) return null;
+    return teachersList.find((t: any) => t.id === profileData.uid || t.id === profileData.id || (t.email && profileData.email && t.email === profileData.email) || (t.name && profileData.fullname && t.name === profileData.fullname)) || profileData;
+  }, [profileData, teachersList]);
+
+  const displayName = currentTeacher?.name || currentTeacher?.fullname || user?.displayName || 'Teacher';
+  const displayEmail = currentTeacher?.email || user?.email || 'N/A';
+  const displayRole = currentTeacher?.role ? currentTeacher.role.charAt(0).toUpperCase() + currentTeacher.role.slice(1) : 'Teacher';
+  
+  const displaySubject = (currentTeacher?.subjects && currentTeacher.subjects.length > 0) ? currentTeacher.subjects.join(', ') : (currentTeacher?.subject ? currentTeacher.subject.split(',').map((s: string) => s.trim()).filter(Boolean).join(', ') : 'N/A');
+  const displayQualification = currentTeacher?.qualification || 'N/A';
+  const displayExperience = currentTeacher?.experience || 'N/A';
+  const displayPhone = currentTeacher?.phone || 'N/A';
+  const displayImage = currentTeacher?.image?.trim() ? currentTeacher.image : user?.photoURL?.trim() ? user.photoURL : null;
 
   const confirmLogout = async () => {
     setLogoutModalVisible(false);

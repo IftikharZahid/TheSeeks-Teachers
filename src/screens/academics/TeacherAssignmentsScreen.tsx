@@ -187,27 +187,24 @@ export const TeacherAssignmentsScreen: React.FC = () => {
         />
       )}
 
-      <Modal visible={showModal} transparent animationType="slide" onRequestClose={() => setShowModal(false)} statusBarTranslucent={true}>
-        <View style={styles.modalOverlay}>
-          <KeyboardAvoidingView
-            behavior="height"
-            keyboardVerticalOffset={0}
-            style={{ width: '100%', maxHeight: '90%', flexShrink: 1 }}
-          >
-            <View style={[styles.modalContent, { backgroundColor: theme.card }]}>
-              <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
-                <Text style={[styles.modalTitle, { color: theme.text }]}>Add Assignment</Text>
-                <TouchableOpacity onPress={() => setShowModal(false)} style={styles.closeBtn}>
-                  <Ionicons name="close" size={scale(24)} color={theme.textSecondary} />
-                </TouchableOpacity>
-              </View>
+      <Modal visible={showModal} transparent={true} animationType="slide" onRequestClose={() => setShowModal(false)} statusBarTranslucent={true}>
+        <View style={{ flex: 1, backgroundColor: theme.card }}>
+          <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
+            <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={0}>
+              <View style={[styles.modalContentFullScreen, { backgroundColor: theme.card }]}>
+                <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
+                  <Text style={[styles.modalTitle, { color: theme.text }]}>Add Assignment</Text>
+                  <TouchableOpacity onPress={() => setShowModal(false)} style={styles.closeBtn}>
+                    <Ionicons name="close" size={scale(24)} color={theme.textSecondary} />
+                  </TouchableOpacity>
+                </View>
 
-              <ScrollView
-                style={styles.modalBody}
-                contentContainerStyle={{ paddingBottom: scale(20) }}
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-              >
+            <ScrollView
+              style={styles.modalBody}
+              contentContainerStyle={{ paddingBottom: scale(20) }}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
                 <Text style={[styles.label, { color: theme.textSecondary }]}>Title *</Text>
                 <TextInput
                   style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: isDark ? '#334155' : '#f8fafc' }]}
@@ -393,17 +390,22 @@ export const TeacherAssignmentsScreen: React.FC = () => {
                   onChangeText={t => setFormData({ ...formData, description: t })}
                 />
 
+                <View style={{ height: scale(20) }} />
+              </ScrollView>
+
+              <View style={[styles.modalFooter, { backgroundColor: theme.card }]}>
                 <TouchableOpacity
-                  style={[styles.saveBtn, { backgroundColor: theme.primary, opacity: saving ? 0.7 : 1 }]}
+                  style={[styles.saveBtn, { backgroundColor: theme.primary, opacity: saving ? 0.7 : 1, marginTop: 0 }]}
                   onPress={handleSave}
                   disabled={saving}
                 >
                   {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>Save Assignment</Text>}
                 </TouchableOpacity>
-              </ScrollView>
+              </View>
             </View>
           </KeyboardAvoidingView>
-        </View>
+        </SafeAreaView>
+      </View>
       </Modal>
     </SafeAreaView>
   );
@@ -445,6 +447,14 @@ const styles = StyleSheet.create({
   deadlineText: { fontSize: scale(11), fontWeight: '600' },
   emptyContainer: { alignItems: 'center', marginTop: scale(60) },
   emptyText: { fontSize: scale(14), fontWeight: '600', marginTop: scale(10) },
+  modalContentFullScreen: { flex: 1 },
+  modalFooter: {
+    paddingHorizontal: scale(20),
+    paddingBottom: scale(20),
+    paddingTop: scale(10),
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.05)',
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -455,7 +465,8 @@ const styles = StyleSheet.create({
     borderTopRightRadius: scale(20),
     paddingTop: scale(20),
     width: '100%',
-    flexShrink: 1,
+    maxHeight: '90%',
+    flex: 1,
   },
   modalHeader: {
     flexDirection: 'row',

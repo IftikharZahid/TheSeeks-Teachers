@@ -64,8 +64,7 @@ export const TeacherSuggestionsScreen: React.FC = () => {
 
       <KeyboardAvoidingView 
         style={{ flex: 1 }} 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? scale(60) : scale(20)}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView 
           contentContainerStyle={{ flexGrow: 1, padding: scale(16), paddingBottom: insets.bottom + scale(20) }}
@@ -90,16 +89,23 @@ export const TeacherSuggestionsScreen: React.FC = () => {
           />
 
           <Text style={[styles.inputLabel, { color: theme.text, marginTop: scale(16) }]}>Detailed Suggestion</Text>
-          <TextInput
-            style={[styles.textArea, { backgroundColor: theme.card, color: theme.text, borderColor: theme.border }]}
-            placeholder="Explain your suggestion in detail..."
-            placeholderTextColor={theme.textSecondary + '80'}
-            value={suggestion}
-            onChangeText={setSuggestion}
-            multiline
-            textAlignVertical="top"
-          />
+          <View style={{ flex: 1 }}>
+            <TextInput
+              style={[styles.textArea, { backgroundColor: theme.card, color: theme.text, borderColor: theme.border, flex: 1 }]}
+              placeholder="Explain your suggestion in detail..."
+              placeholderTextColor={theme.textSecondary + '80'}
+              value={suggestion}
+              onChangeText={setSuggestion}
+              multiline
+              textAlignVertical="top"
+            />
+          </View>
 
+          <View style={{ height: scale(20) }} />
+        </ScrollView>
+
+        {/* ── Fixed Footer: Submit Button pinned to keyboard edge ── */}
+        <View style={{ padding: scale(16), borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(0,0,0,0.1)', backgroundColor: theme.card }}>
           <TouchableOpacity 
             style={[styles.submitButton, (isSubmitting || !title.trim() || !suggestion.trim()) && { opacity: 0.7 }]} 
             onPress={handleSubmit}
@@ -111,7 +117,7 @@ export const TeacherSuggestionsScreen: React.FC = () => {
               <Text style={styles.submitButtonText}>Submit to Management</Text>
             )}
           </TouchableOpacity>
-        </ScrollView>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -182,7 +188,6 @@ const styles = StyleSheet.create({
     borderRadius: scale(12),
     paddingVertical: scale(16),
     alignItems: 'center',
-    marginTop: scale(32),
     shadowColor: '#3b82f6',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,

@@ -75,8 +75,7 @@ export const SettingsScreen: React.FC = () => {
 
 
   const accountItems = [
-    { icon: 'person', color: '#3b82f6', title: 'Personal Information' },
-    { icon: 'key', color: '#8b5cf6', title: 'Change Password' },
+    { icon: 'key', color: '#8b5cf6', title: 'Change Password', screen: 'ChangePasswordScreen' },
     { icon: 'finger-print', color: '#10b981', title: 'Biometric Login' },
   ];
 
@@ -87,7 +86,6 @@ export const SettingsScreen: React.FC = () => {
 
   const preferenceItems = [
     { icon: 'language', color: '#8b5cf6', title: 'App Language' },
-    { icon: 'server', color: '#64748b', title: 'Data & Storage' },
     { icon: 'help-circle', color: '#f59e0b', title: 'Help Center', screen: 'HelpCenterScreen' },
     { icon: 'shield-checkmark', color: '#10b981', title: 'Privacy Policy', screen: 'PrivacyPolicyScreen' },
     { icon: 'information-circle', color: '#6366f1', title: 'About App', screen: 'AboutScreen' },
@@ -131,7 +129,7 @@ export const SettingsScreen: React.FC = () => {
                   icon={item.icon}
                   iconColor={item.color}
                   title={item.title}
-                  onPress={() => setComingSoonModalVisible(true)}
+                  onPress={(item as any).screen ? () => navigation.navigate((item as any).screen as never) : () => setComingSoonModalVisible(true)}
                 />
               </React.Fragment>
             ))}

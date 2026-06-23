@@ -1,6 +1,6 @@
 import { scale } from '../../utils/responsive';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, FlatList, TouchableOpacity, Pressable, TextInput, Modal, Alert, ActivityIndicator, Platform , StatusBar} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, FlatList, TouchableOpacity, Pressable, TextInput, Modal, Alert, ActivityIndicator, Platform, StatusBar, TouchableWithoutFeedback, KeyboardAvoidingView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
@@ -281,17 +281,17 @@ const AUTHORIZATION = {
   canAddExamForSubject: (
     bookName: string,
     isTeacher: boolean,
-    teacherSubject: string
+    teacherSubjectsList: string[]
   ): AuthorizationError => {
     if (!isTeacher) return { isUnauthorized: false, message: '' };
 
     const normalizedBook = normalizeSubjectName(bookName);
-    const normalizedSubject = normalizeSubjectName(teacherSubject);
+    const isAllowed = teacherSubjectsList.some((s: string) => normalizeSubjectName(s) === normalizedBook);
 
-    if (normalizedBook !== normalizedSubject) {
+    if (!isAllowed) {
       return {
         isUnauthorized: true,
-        message: `You can only add exam records for "${teacherSubject}" subject.`,
+        message: `You can only add exam records for your assigned subjects.`,
       };
     }
 
@@ -406,14 +406,30 @@ export const Class9thExamsScreen: React.FC = () => {
   const role = (profile?.role || '').toLowerCase();
   const isTeacher = role !== 'admin' && role !== 'student' && !!role;
   const teacherId = profile?.id || profile?.uid || profile?.email || '';
-  const teacherSubject = profile?.subject || profile?.class || profile?.booktitle || profile?.bookTitle || '';
+  const teachers = useAppSelector(state => state.teachers.list);
+  const currentAdminTeacher = teachers.find((t: any) => t.id === profile?.uid || t.id === profile?.id || (t as any).email === profile?.email || t.name === profile?.fullname);
+  const adminSubjectStr = currentAdminTeacher?.subject;
+  const adminSubjectsArr = (currentAdminTeacher as any)?.subjects;
+
+  const teacherSubjectStr = adminSubjectStr || profile?.subject || profile?.class || profile?.booktitle || profile?.bookTitle || '';
+  const teacherSubjectsList = useMemo(() => {
+    let list: string[] = [];
+    if (adminSubjectsArr && Array.isArray(adminSubjectsArr) && adminSubjectsArr.length > 0) {
+      list = adminSubjectsArr;
+    } else if (teacherSubjectStr) {
+      list = teacherSubjectStr.split(',').map((s: string) => s.trim()).filter(Boolean);
+    } else if (profile?.subjects && Array.isArray(profile?.subjects)) {
+      list = profile.subjects;
+    }
+    return Array.from(new Set(list));
+  }, [profile, teacherSubjectStr, adminSubjectsArr]);
+  const defaultTeacherSubject = teacherSubjectsList.length > 0 ? teacherSubjectsList[0] : teacherSubjectStr;
 
   const exams = useAppSelector(state => state.admin.exams);
   const examCategories = useAppSelector(state => state.admin.examCategories);
   const examTitles = useAppSelector(state => state.admin.examTitles);
   const loading = useAppSelector(state => state.admin.examsLoading);
 
-  const teachers = useAppSelector(state => state.teachers.list);
   const books = teachers.filter(t => t.booktitle || t.subject).map(t => ({ ...t })) as Teacher[];
 
   const students = useAppSelector(state => state.admin.students) as AdminStudent[];
@@ -480,6 +496,16 @@ export const Class9thExamsScreen: React.FC = () => {
   const [showFilterGenderDropdown, setShowFilterGenderDropdown] = useState(false);
 
 
+  const [selectedTeacherSubject, setSelectedTeacherSubject] = useState<string>(defaultTeacherSubject);
+  const [showTeacherSubjectDropdown, setShowTeacherSubjectDropdown] = useState(false);
+  const teacherSubjectAnchorRef = useRef<View | null>(null);
+
+  useEffect(() => {
+    if (!selectedTeacherSubject && defaultTeacherSubject) {
+      setSelectedTeacherSubject(defaultTeacherSubject);
+    }
+  }, [defaultTeacherSubject, selectedTeacherSubject]);
+
   const [title, setTitle] = useState('');
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -505,15 +531,16 @@ export const Class9thExamsScreen: React.FC = () => {
     setShowBookDropdown(false);
     setShowStudentDropdown(false);
     setShowCategoryDropdown(false);
+    setShowTeacherSubjectDropdown(false);
     setShowFilterTestNoDropdown(false);
     setShowFilterGenderDropdown(false);
   };
 
   const isAnyFilterDropdownOpen = showFilterTestNoDropdown || showFilterGenderDropdown;
-  const isAnyFormDropdownOpen = showTitleDropdown || showClassDropdown || showBookDropdown || showStudentDropdown || showCategoryDropdown;
+  const isAnyFormDropdownOpen = showTitleDropdown || showClassDropdown || showBookDropdown || showStudentDropdown || showCategoryDropdown || showTeacherSubjectDropdown;
 
   const getTeacherSubjectBook = (): BookEntry => {
-    const subject = teacherSubject.trim();
+    const subject = selectedTeacherSubject.trim();
     return entryBooks.find(book => normalizeSubjectName(book.name) === normalizeSubjectName(subject)) || {
       name: subject,
       totalMarks: '',
@@ -522,22 +549,35 @@ export const Class9thExamsScreen: React.FC = () => {
   };
 
   const updateTeacherSubjectBook = (field: 'totalMarks' | 'obtainedMarks', value: string) => {
-    if (!teacherSubject.trim()) return;
+    const digits = value.replace(/[^0-9]/g, '');
+
+    if (!selectedTeacherSubject.trim()) return;
 
     setEntryBooks(prev => {
-      const subject = teacherSubject.trim();
+      const subject = selectedTeacherSubject.trim();
       const existingIndex = prev.findIndex(book => normalizeSubjectName(book.name) === normalizeSubjectName(subject));
 
       if (existingIndex >= 0) {
         return prev.map((book, index) => (
-          index === existingIndex ? { ...book, name: subject, [field]: value } : book
+          (() => {
+            if (index !== existingIndex) return book;
+            const updatedBook = { ...book, name: subject, [field]: digits };
+            if (field === 'totalMarks' && updatedBook.obtainedMarks && parseInt(updatedBook.obtainedMarks) > parseInt(digits || '0')) {
+              updatedBook.obtainedMarks = digits;
+            }
+            if (field === 'obtainedMarks') {
+              if (digits && !book.totalMarks) { alert('Please enter Total marks first.'); return book; }
+              if (digits && parseInt(digits) > parseInt(book.totalMarks || '0')) { alert('Obtained marks cannot exceed Total marks.'); updatedBook.obtainedMarks = book.totalMarks; }
+            }
+            return updatedBook;
+          })()
         ));
       }
 
       return [{
         name: subject,
-        totalMarks: field === 'totalMarks' ? value : '',
-        obtainedMarks: field === 'obtainedMarks' ? value : '',
+        totalMarks: field === 'totalMarks' ? digits : '',
+        obtainedMarks: field === 'obtainedMarks' ? digits : '',
       }];
     });
   };
@@ -546,8 +586,8 @@ export const Class9thExamsScreen: React.FC = () => {
     const formattedDate = date.toLocaleDateString('en-GB', {
       day: 'numeric', month: 'short', year: 'numeric'
     });
-    const scopedEntryBooks = isTeacher && teacherSubject
-      ? entryBooks.filter(book => normalizeSubjectName(book.name) === normalizeSubjectName(teacherSubject))
+    const scopedEntryBooks = isTeacher && teacherSubjectsList.length > 0
+      ? entryBooks.filter(book => teacherSubjectsList.some((s: string) => normalizeSubjectName(s) === normalizeSubjectName(book.name)))
       : entryBooks;
 
     if (!title || !category) {
@@ -562,7 +602,7 @@ export const Class9thExamsScreen: React.FC = () => {
           const authError = AUTHORIZATION.canAddExamForSubject(
             book.name,
             isTeacher,
-            teacherSubject
+            teacherSubjectsList
           );
           if (authError.isUnauthorized) {
             Alert.alert('Authorization Error', authError.message);
@@ -573,7 +613,7 @@ export const Class9thExamsScreen: React.FC = () => {
         const authError = AUTHORIZATION.canAddExamForSubject(
           bookName,
           isTeacher,
-          teacherSubject
+          teacherSubjectsList
         );
         if (authError.isUnauthorized) {
           Alert.alert('Authorization Error', authError.message);
@@ -640,7 +680,7 @@ export const Class9thExamsScreen: React.FC = () => {
       studentEmail: studentEmail || '',
       studentClass: studentClass || '',
       books: scopedEntryBooks.length > 0 ? scopedEntryBooks : undefined,
-      bookName: scopedEntryBooks.length > 0 ? scopedEntryBooks.map(b => b.name).join(', ') : (isTeacher && teacherSubject ? teacherSubject : (bookName || '')),
+      bookName: scopedEntryBooks.length > 0 ? scopedEntryBooks.map(b => b.name).join(', ') : (isTeacher && selectedTeacherSubject ? selectedTeacherSubject : (bookName || '')),
       totalMarks: finalTotalMarks,
       obtainedMarks: finalObtainedMarks,
       status: computedStatus,
@@ -735,11 +775,11 @@ export const Class9thExamsScreen: React.FC = () => {
         loadedBooks = [{ name: exam.bookName || '', totalMarks: exam.totalMarks || '', obtainedMarks: exam.obtainedMarks || '' }];
       }
 
-      if (isTeacher && teacherSubject) {
-        loadedBooks = loadedBooks.filter(b => normalizeSubjectName(b.name) === normalizeSubjectName(teacherSubject));
-        const hasSubject = loadedBooks.some(b => normalizeSubjectName(b.name) === normalizeSubjectName(teacherSubject));
+      if (isTeacher && selectedTeacherSubject) {
+        loadedBooks = loadedBooks.filter(b => normalizeSubjectName(b.name) === normalizeSubjectName(selectedTeacherSubject));
+        const hasSubject = loadedBooks.some(b => normalizeSubjectName(b.name) === normalizeSubjectName(selectedTeacherSubject));
         if (!hasSubject) {
-          loadedBooks.push({ name: teacherSubject.trim(), totalMarks: '', obtainedMarks: '' });
+          loadedBooks.push({ name: selectedTeacherSubject.trim(), totalMarks: '', obtainedMarks: '' });
         }
       }
       setEntryBooks(loadedBooks);
@@ -767,8 +807,8 @@ export const Class9thExamsScreen: React.FC = () => {
     setStudentEmail('');
     setStudentClass('');
     // Teachers always have their subject pre-loaded; admins start blank
-    setEntryBooks(isTeacher && teacherSubject
-      ? [{ name: teacherSubject.trim(), totalMarks: '', obtainedMarks: '' }]
+    setEntryBooks(isTeacher && selectedTeacherSubject
+      ? [{ name: selectedTeacherSubject.trim(), totalMarks: '', obtainedMarks: '' }]
       : []);
     setCurrentBookName('');
     setCurrentTotalMarks('');
@@ -790,7 +830,7 @@ export const Class9thExamsScreen: React.FC = () => {
       const authError = AUTHORIZATION.canAddExamForSubject(
         currentBookName,
         isTeacher,
-        teacherSubject
+        teacherSubjectsList
       );
       if (authError.isUnauthorized) {
         Alert.alert('Authorization Error', authError.message);
@@ -816,7 +856,7 @@ export const Class9thExamsScreen: React.FC = () => {
       totalMarks: currentTotalMarks.trim(),
       obtainedMarks: currentObtainedMarks.trim(),
     }]);
-    setCurrentBookName(isTeacher && teacherSubject ? teacherSubject : '');
+    setCurrentBookName(isTeacher && selectedTeacherSubject ? selectedTeacherSubject : '');
     setCurrentTotalMarks('');
     setCurrentObtainedMarks('');
   };
@@ -825,14 +865,14 @@ export const Class9thExamsScreen: React.FC = () => {
     const bookToRemove = entryBooks[index];
     
     // ─── Teacher Authorization Check ───────────────────────────────────────────
-    if (isTeacher && teacherSubject) {
+    if (isTeacher && teacherSubjectsList.length > 0) {
       const normalizedBook = bookToRemove.name.trim().toLowerCase().replace(/_/g, ' ');
-      const normalizedSubject = teacherSubject.trim().toLowerCase().replace(/_/g, ' ');
+      const isAllowed = teacherSubjectsList.some((s: string) => s.trim().toLowerCase().replace(/_/g, ' ') === normalizedBook);
       
-      if (normalizedBook !== normalizedSubject) {
+      if (!isAllowed) {
         Alert.alert(
           'Authorization Error',
-          `You can only modify exam records for "${teacherSubject}" subject.`
+          `You can only modify exam records for your assigned subjects.`
         );
         return;
       }
@@ -925,13 +965,13 @@ export const Class9thExamsScreen: React.FC = () => {
           uploadSubjects.push(sampleRow.bookName.trim().toLowerCase());
         }
 
-        const normalizedTeacherSubject = teacherSubject.trim().toLowerCase();
+        const normalizedTeacherSubject = selectedTeacherSubject.trim().toLowerCase();
         const hasUnauthorizedSubject = uploadSubjects.some(subj => subj && subj !== normalizedTeacherSubject);
 
         if (hasUnauthorizedSubject) {
           Alert.alert(
             'Authorization Error',
-            `You can only upload exam records for "${teacherSubject}" subject. The file contains unauthorized subjects.`
+            `You can only upload exam records for "${selectedTeacherSubject}" subject. The file contains unauthorized subjects.`
           );
           setUploading(false);
           return;
@@ -988,7 +1028,7 @@ export const Class9thExamsScreen: React.FC = () => {
 
             if (hasMultiSubject) {
               for (const subj of subjectNames) {
-                if (isTeacher && teacherSubject && subj.replace(/_/g, ' ').trim().toLowerCase() !== teacherSubject.trim().toLowerCase()) {
+                if (isTeacher && selectedTeacherSubject && subj.replace(/_/g, ' ').trim().toLowerCase() !== selectedTeacherSubject.trim().toLowerCase()) {
                   continue; // Restrict teacher to only their subject
                 }
                 const total = item[subj + totalSuffix];
@@ -1040,7 +1080,7 @@ export const Class9thExamsScreen: React.FC = () => {
               examDoc.obtainedMarks = aggObtained.toString();
               examDoc.bookName = books.map(b => b.name).join(', ');
             } else {
-              examDoc.bookName = isTeacher && teacherSubject ? teacherSubject : (item.bookName || '');
+              examDoc.bookName = isTeacher && selectedTeacherSubject ? selectedTeacherSubject : (item.bookName || '');
               examDoc.totalMarks = item.totalMarks?.toString() || '';
               examDoc.obtainedMarks = item.obtainedMarks?.toString() || '';
             }
@@ -1161,8 +1201,8 @@ export const Class9thExamsScreen: React.FC = () => {
   const handleManualEntry = () => {
     setChoiceModalVisible(false);
     resetForm();
-    if (isTeacher && teacherSubject) {
-      setCurrentBookName(teacherSubject);
+    if (isTeacher && selectedTeacherSubject) {
+      setCurrentBookName(selectedTeacherSubject);
     }
     setModalVisible(true);
   };
@@ -1501,8 +1541,9 @@ export const Class9thExamsScreen: React.FC = () => {
           EDIT / ADD MODAL
       ══════════════════════════════════════════════════════════════════════ */}
       <Modal visible={modalVisible} animationType="slide" transparent statusBarTranslucent>
-        <View style={{ flex: 1, backgroundColor: theme.background }}>
-          <View style={{ flex: 1, paddingTop: Platform.OS === 'ios' ? 48 : (StatusBar.currentHeight || 30) }}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior="height">
+          <View style={{ flex: 1, backgroundColor: theme.background }}>
+            <View style={{ flex: 1, paddingTop: Platform.OS === 'ios' ? 48 : (StatusBar.currentHeight || 30) }}>
             {/* Header */}
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: scale(16), paddingVertical: scale(14), borderBottomWidth: 1, borderBottomColor: theme.border, backgroundColor: theme.card }}>
               <View>
@@ -1806,7 +1847,59 @@ export const Class9thExamsScreen: React.FC = () => {
                     <Ionicons name={showCategoryDropdown ? 'chevron-up' : 'chevron-down'} size={14} color={theme.textSecondary} />
                   </TouchableOpacity>
 
-                  {/* ▼ REPLACED: Category Dropdown — 5 visible, scrollable */}
+                  
+              {isTeacher && (
+                <View style={[styles.row, { marginTop: scale(10), zIndex: 1400 }]}>
+                  <View style={[styles.col, { flex: 1 }]}>
+                    <Text style={[styles.label, { color: theme.text }]}>Subject</Text>
+                    <View style={{ position: 'relative', zIndex: 1400 }}>
+                      <TouchableOpacity
+                        ref={teacherSubjectAnchorRef}
+                        onPress={() => {
+                          setShowTeacherSubjectDropdown(!showTeacherSubjectDropdown);
+                          setShowCategoryDropdown(false);
+                          setShowTitleDropdown(false);
+                          setShowClassDropdown(false);
+                          setShowBookDropdown(false);
+                          setShowStudentDropdown(false);
+                        }}
+                        style={[styles.selectInput, { backgroundColor: theme.card, borderColor: showTeacherSubjectDropdown ? theme.primary : theme.border }]}
+                        disabled={teacherSubjectsList.length <= 1}
+                      >
+                        <Ionicons name="book-outline" size={14} color={theme.textSecondary} style={{ marginRight: scale(6) }} />
+                        <Text style={{ color: selectedTeacherSubject ? theme.text : theme.textSecondary, fontSize: scale(13), flex: 1 }}>
+                          {selectedTeacherSubject || 'Select Subject'}
+                        </Text>
+                        {teacherSubjectsList.length > 1 && (
+                          <Ionicons name={showTeacherSubjectDropdown ? 'chevron-up' : 'chevron-down'} size={14} color={theme.textSecondary} />
+                        )}
+                      </TouchableOpacity>
+                      {showTeacherSubjectDropdown && teacherSubjectsList.length > 1 && (
+                        <DropdownMenu
+                          options={teacherSubjectsList.map((s) => ({
+                            label: s,
+                            value: s,
+                            icon: 'book-outline',
+                          }))}
+                          selectedValue={selectedTeacherSubject}
+                          onSelect={(val) => {
+                            setSelectedTeacherSubject(val);
+                            setShowTeacherSubjectDropdown(false);
+                          }}
+                          theme={theme}
+                          zIndex={1500}
+                          maxHeight={DROPDOWN_ITEM_HEIGHT * 5}
+                          showScrollBar={true}
+                          anchorRef={teacherSubjectAnchorRef}
+                          onClose={() => setShowTeacherSubjectDropdown(false)}
+                        />
+                      )}
+                    </View>
+                  </View>
+                </View>
+              )}
+
+              {/* ▼ REPLACED: Category Dropdown — 5 visible, scrollable */}
                   {showCategoryDropdown && (
                     <DropdownMenu
                       options={CATEGORIES.map((cat, i) => ({
@@ -1858,30 +1951,33 @@ export const Class9thExamsScreen: React.FC = () => {
               <View style={[styles.sectionHeader, { marginBottom: scale(10) }]}>
                 <Ionicons name="library-outline" size={14} color={theme.primary} />
                 <Text style={[styles.sectionTitle, { color: theme.primary }]}>Marks & Books</Text>
-                {isTeacher && teacherSubject && (
+                {isTeacher && selectedTeacherSubject && (
                   <View style={{ marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', backgroundColor: theme.primary + '12', paddingHorizontal: scale(8), paddingVertical: scale(3), borderRadius: scale(10) }}>
                     <Ionicons name="lock-closed" size={10} color={theme.primary} style={{ marginRight: scale(3) }} />
-                    <Text style={{ fontSize: scale(9), fontWeight: '700', color: theme.primary, textTransform: 'uppercase', letterSpacing: 0.3 }}>Restricted to {teacherSubject}</Text>
+                    <Text style={{ fontSize: scale(9), fontWeight: '700', color: theme.primary, textTransform: 'uppercase', letterSpacing: 0.3 }}>Restricted</Text>
                   </View>
                 )}
               </View>
 
               {/* ── Teacher View: Single locked subject with direct mark inputs ── */}
-              {isTeacher && teacherSubject ? (
+              {isTeacher && selectedTeacherSubject ? (
                 <View style={styles.teacherMarksPanel}>
                   {/* Info banner for teacher */}
-                  <View style={[styles.teacherSubjectPill, { backgroundColor: theme.primary + '10', borderColor: theme.primary + '25' }]}>
+                  <View style={[styles.teacherSubjectPill, { backgroundColor: theme.primary + '10', borderColor: theme.primary + '25', zIndex: 3000 }]}>
                     <View style={[styles.teacherSubjectIcon, { backgroundColor: theme.primary + '16' }]}>
                       <Ionicons name="book-outline" size={14} color={theme.primary} />
                     </View>
                     <View style={{ flex: 1, minWidth: 0 }}>
                       <Text style={[styles.teacherSubjectLabel, { color: theme.textSecondary }]}>Selected Subject</Text>
                       <Text style={[styles.teacherSubjectName, { color: theme.primary }]} numberOfLines={1}>
-                        {teacherSubject}
+                        {selectedTeacherSubject}
                       </Text>
                     </View>
                     <Ionicons name="lock-closed" size={13} color={theme.primary} />
                   </View>
+
+                  {/* Dropdown for Teacher Subjects */}
+                  
 
                   {/* Column headers */}
                   <View style={{ flexDirection: 'row', paddingHorizontal: scale(2), marginBottom: scale(2) }}>
@@ -1909,7 +2005,7 @@ export const Class9thExamsScreen: React.FC = () => {
                       <TextInput
                         style={[{
                           flex: 1, height: scale(36), borderWidth: 1, borderRadius: scale(7),
-                          paddingHorizontal: scale(8), fontSize: scale(13), fontWeight: '700', textAlign: 'center',
+                          paddingHorizontal: 0, fontSize: scale(13), fontWeight: '700', textAlign: 'center',
                           backgroundColor: theme.card, color: theme.text, borderColor: theme.border,
                         }]}
                         placeholder="—"
@@ -1925,7 +2021,7 @@ export const Class9thExamsScreen: React.FC = () => {
                       <TextInput
                         style={[{
                           flex: 1, height: scale(36), borderWidth: 1, borderRadius: scale(7),
-                          paddingHorizontal: scale(8), fontSize: scale(13), fontWeight: '800', textAlign: 'center',
+                          paddingHorizontal: 0, fontSize: scale(13), fontWeight: '800', textAlign: 'center',
                           backgroundColor: theme.primary + '08', color: theme.primary,
                           borderColor: theme.primary + '30',
                         }]}
@@ -1969,8 +2065,12 @@ export const Class9thExamsScreen: React.FC = () => {
                           placeholderTextColor={theme.textSecondary}
                           value={book.totalMarks}
                           onChangeText={(val) => {
+                            const digits = val.replace(/[^0-9]/g, '');
                             const updated = [...entryBooks];
-                            updated[index] = { ...updated[index], totalMarks: val };
+                            updated[index] = { ...updated[index], totalMarks: digits };
+                            if (updated[index].obtainedMarks && parseInt(updated[index].obtainedMarks) > parseInt(digits || '0')) {
+                              updated[index].obtainedMarks = digits;
+                            }
                             setEntryBooks(updated);
                           }}
                           keyboardType="numeric"
@@ -1983,8 +2083,15 @@ export const Class9thExamsScreen: React.FC = () => {
                           placeholderTextColor={theme.textSecondary}
                           value={book.obtainedMarks}
                           onChangeText={(val) => {
+                            const digits = val.replace(/[^0-9]/g, '');
                             const updated = [...entryBooks];
-                            updated[index] = { ...updated[index], obtainedMarks: val };
+                            if (digits && !updated[index].totalMarks) { alert('Please enter Total marks first.'); return; }
+                            if (digits && parseInt(digits) > parseInt(updated[index].totalMarks || '0')) {
+                              alert('Obtained marks cannot exceed Total marks.');
+                              updated[index] = { ...updated[index], obtainedMarks: updated[index].totalMarks };
+                            } else {
+                              updated[index] = { ...updated[index], obtainedMarks: digits };
+                            }
                             setEntryBooks(updated);
                           }}
                           keyboardType="numeric"
@@ -2025,7 +2132,13 @@ export const Class9thExamsScreen: React.FC = () => {
                         placeholder="Total"
                         placeholderTextColor={theme.textSecondary}
                         value={currentTotalMarks}
-                        onChangeText={setCurrentTotalMarks}
+                        onChangeText={(val) => {
+                          const digits = val.replace(/[^0-9]/g, '');
+                          setCurrentTotalMarks(digits);
+                          if (currentObtainedMarks && parseInt(currentObtainedMarks) > parseInt(digits || '0')) {
+                            setCurrentObtainedMarks(digits);
+                          }
+                        }}
                         keyboardType="numeric"
                       />
                     </View>
@@ -2035,7 +2148,16 @@ export const Class9thExamsScreen: React.FC = () => {
                         placeholder="Obt."
                         placeholderTextColor={theme.textSecondary}
                         value={currentObtainedMarks}
-                        onChangeText={setCurrentObtainedMarks}
+                        onChangeText={(val) => {
+                          const digits = val.replace(/[^0-9]/g, '');
+                          if (digits && !currentTotalMarks) { alert('Please enter Total marks first.'); return; }
+                          if (digits && parseInt(digits) > parseInt(currentTotalMarks || '0')) {
+                            alert('Obtained marks cannot exceed Total marks.');
+                            setCurrentObtainedMarks(currentTotalMarks);
+                          } else {
+                            setCurrentObtainedMarks(digits);
+                          }
+                        }}
                         keyboardType="numeric"
                       />
                     </View>
@@ -2097,9 +2219,10 @@ export const Class9thExamsScreen: React.FC = () => {
             <TouchableOpacity onPress={() => { setModalVisible(false); resetForm(); }} style={styles.fsFormCancelButton}>
               <Text style={[styles.fsFormCancelText, { color: theme.textSecondary }]}>Cancel</Text>
             </TouchableOpacity>
-          </ScrollView>
+                      </ScrollView>
+            </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* ══════════════════════════════════════════════════════════════════════
@@ -2481,7 +2604,7 @@ const styles = StyleSheet.create({
   
   // ─── Book Management ──────────────────────────────────────────────────────
   addBookRow: { flexDirection: 'row', alignItems: 'center', padding: scale(8), borderRadius: scale(8), borderWidth: 1, marginBottom: scale(8) },
-  compactInput: { borderWidth: 1, borderRadius: scale(8), paddingHorizontal: scale(12), height: scale(40), fontSize: scale(13) },
+  compactInput: { borderWidth: 1, borderRadius: scale(8), paddingHorizontal: 0, height: scale(40), fontSize: scale(13), textAlign: 'center' },
   compactAddBtn: { width: scale(36), height: scale(36), borderRadius: scale(8), alignItems: 'center', justifyContent: 'center' },
   teacherMarksPanel: { gap: scale(7) },
   teacherSubjectPill: { minHeight: scale(38), borderRadius: scale(7), borderWidth: 1, paddingHorizontal: scale(8), paddingVertical: scale(6), flexDirection: 'row', alignItems: 'center', gap: scale(8) },
@@ -2489,7 +2612,7 @@ const styles = StyleSheet.create({
   teacherSubjectLabel: { fontSize: scale(8), fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.35 },
   teacherSubjectName: { fontSize: scale(13), fontWeight: '800', marginTop: scale(1) },
   teacherMarksRow: { flexDirection: 'row', gap: scale(8) },
-  teacherMarkInput: { height: scale(36), borderWidth: 1, borderRadius: scale(7), paddingHorizontal: scale(8), fontSize: scale(13), fontWeight: '800', textAlign: 'center' },
+  teacherMarkInput: { height: scale(36), borderWidth: 1, borderRadius: scale(7), paddingHorizontal: 0, fontSize: scale(13), fontWeight: '800', textAlign: 'center' },
   
   // ─── Dropdowns & Lists ────────────────────────────────────────────────────
   studentDropdownRow: { flexDirection: 'row', alignItems: 'center', gap: scale(6) },

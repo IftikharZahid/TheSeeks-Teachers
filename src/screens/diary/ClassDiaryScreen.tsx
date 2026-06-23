@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, Modal, TextInput, ActivityIndicator, Alert, Platform, ScrollView, KeyboardAvoidingView, Keyboard } from 'react-native';
+import { View, Text, StyleSheet, StatusBar, TouchableOpacity, FlatList, Modal, TextInput, ActivityIndicator, Alert, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -326,142 +326,190 @@ export const ClassDiaryScreen: React.FC = () => {
     );
   };
 
-  // Keep a consistent padding at the bottom of the modal footer
-  const buttonPaddingBottom = scale(16);
-
   const renderModalContent = () => (
-    <>
-      <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
-        <View>
-          <Text style={[styles.modalTitle, { color: theme.text }]}>
-            {editingEntryId ? 'Edit Entry' : 'New Entry'}
-          </Text>
-          {teacherSubjectsList.length > 1 ? (
-            <View style={{ zIndex: 1000 }}>
-              <TouchableOpacity style={styles.subjectBadge} onPress={() => setShowSubjectPicker(!showSubjectPicker)}>
-                <Text style={styles.subjectBadgeText}>{selectedSubject} ▾</Text>
-              </TouchableOpacity>
-              {showSubjectPicker && (
-                <View style={[styles.dropdownMenu, { position: 'absolute', top: 30, left: 0, width: scale(140), backgroundColor: isDark ? '#374151' : '#fff', borderColor: theme.border }]}>
-                  {teacherSubjectsList.map((subj: string, idx: number) => (
-                    <TouchableOpacity 
-                      key={subj} 
-                      style={[styles.dropdownItem, idx === teacherSubjectsList.length - 1 && { borderBottomWidth: 0 }, { borderBottomColor: theme.border }]} 
-                      onPress={() => { setSelectedSubject(subj); setShowSubjectPicker(false); }}
-                    >
-                      <Text style={{ color: theme.text, fontSize: scale(13) }}>{subj}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
-            </View>
-          ) : (
-            <View style={styles.subjectBadge}>
-              <Text style={styles.subjectBadgeText}>{selectedSubject}</Text>
-            </View>
-          )}
+    <View style={{ flex: 1 }}>
+
+      {/* Header */}
+      <View style={[styles.modalHeader, { borderBottomColor: theme.border, backgroundColor: theme.card }]}>
+        <View style={styles.modalHeaderLeft}>
+          <View style={[styles.modalIconWrap, { backgroundColor: 'rgba(99,102,241,0.12)' }]}>
+            <Ionicons name={editingEntryId ? 'pencil' : 'book'} size={scale(15)} color="#6366f1" />
+          </View>
+          <View>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>
+              {editingEntryId ? 'Edit Entry' : 'New Diary Entry'}
+            </Text>
+            <Text style={[styles.modalSubtitle, { color: theme.textSecondary }]}>{selectedClass}</Text>
+          </View>
         </View>
-        <TouchableOpacity 
-          style={styles.closeButton}
-          onPress={() => {
-            setModalVisible(false);
-            setEditingEntryId(null);
-            setTitle('');
-            setDetails('');
-            setShowSubjectPicker(false);
-          }}
+        <TouchableOpacity
+          style={[styles.closeButton, { backgroundColor: isDark ? '#374151' : '#f3f4f6' }]}
+          onPress={() => { setModalVisible(false); setEditingEntryId(null); setTitle(''); setDetails(''); setShowSubjectPicker(false); }}
         >
-          <Ionicons name="close" size={scale(20)} color={theme.textSecondary} />
+          <Ionicons name="close" size={scale(17)} color={theme.textSecondary} />
         </TouchableOpacity>
       </View>
 
-      <ScrollView 
-        showsVerticalScrollIndicator={false} 
-        contentContainerStyle={[styles.modalBody, { paddingBottom: Math.max(insets.bottom + scale(10), scale(20)) }]}
+      {/* Scrollable form — Save button scrolls with content */}
+      <ScrollView
+        style={{ flex: 1 }}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.modalBody}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={[styles.label, { color: theme.textSecondary }]}>Title</Text>
-        <TextInput
-          style={[styles.compactInput, { backgroundColor: isDark ? '#1f2937' : '#f3f4f6', color: theme.text }]}
-          placeholder="e.g. Chapter 3 Ex 3.1"
-          placeholderTextColor={theme.textTertiary}
-          value={title}
-          onChangeText={setTitle}
-          autoFocus={true}
-        />
 
-        <View style={{ flexDirection: 'row', gap: scale(12), zIndex: 10 }}>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.label, { color: theme.textSecondary }]}>Date</Text>
-            <TouchableOpacity 
-              style={[styles.compactDateRow, { backgroundColor: isDark ? '#1f2937' : '#f3f4f6' }]}
-              onPress={() => {
-                setViewedDate(date);
-                setShowDatePicker(true);
-                setShowAudiencePicker(false);
-              }}
-            >
-              <Ionicons name="calendar" size={scale(18)} color="#6366f1" style={{ marginRight: scale(8) }} />
-              <Text style={{ color: theme.text, fontSize: scale(14), fontWeight: '500' }}>{date.toLocaleDateString()}</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={{ flex: 1, zIndex: 10 }}>
-            <Text style={[styles.label, { color: theme.textSecondary }]}>Audience</Text>
-            <TouchableOpacity 
-              style={[styles.compactDateRow, { backgroundColor: isDark ? '#1f2937' : '#f3f4f6', justifyContent: 'space-between' }]}
-              onPress={() => setShowAudiencePicker(!showAudiencePicker)}
-            >
-              <Text style={{ color: theme.text, fontSize: scale(14), fontWeight: '500' }}>{audience}</Text>
-              <Ionicons name={showAudiencePicker ? "chevron-up" : "chevron-down"} size={scale(18)} color="#6366f1" />
-            </TouchableOpacity>
-
-            {showAudiencePicker && (
-              <View style={[styles.dropdownMenu, { backgroundColor: isDark ? '#374151' : '#fff', borderColor: theme.border }]}>
-                {['Both', 'Boys', 'Girls'].map((opt, idx) => (
-                  <TouchableOpacity 
-                    key={opt} 
-                    style={[styles.dropdownItem, idx === 2 && { borderBottomWidth: 0 }, { borderBottomColor: theme.border }]} 
-                    onPress={() => { setAudience(opt); setShowAudiencePicker(false); }}
-                  >
-                    <Text style={{ color: theme.text, fontSize: scale(14) }}>{opt}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+        {/* ── Info Cards: Subject + Date ── */}
+        <View style={styles.rowTwo}>
+          <TouchableOpacity
+            style={[styles.infoCard, { backgroundColor: isDark ? '#1e293b' : '#eff6ff', borderColor: '#6366f120' }]}
+            onPress={() => teacherSubjectsList.length > 1 && setShowSubjectPicker(!showSubjectPicker)}
+            activeOpacity={teacherSubjectsList.length > 1 ? 0.7 : 1}
+          >
+            <View style={[styles.infoCardIcon, { backgroundColor: '#6366f115' }]}>
+              <Ionicons name="library" size={scale(14)} color="#6366f1" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.infoCardLabel, { color: '#6366f1' }]}>SUBJECT</Text>
+              <Text style={[styles.infoCardValue, { color: theme.text }]} numberOfLines={1}>{selectedSubject}</Text>
+            </View>
+            {teacherSubjectsList.length > 1 && (
+              <Ionicons name={showSubjectPicker ? 'chevron-up' : 'chevron-down'} size={scale(13)} color="#6366f1" />
             )}
-          </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.infoCard, { backgroundColor: isDark ? '#1e293b' : '#f0fdf4', borderColor: '#10b98120' }]}
+            onPress={() => { setViewedDate(date); setShowDatePicker(!showDatePicker); setShowSubjectPicker(false); }}
+            activeOpacity={0.75}
+          >
+            <View style={[styles.infoCardIcon, { backgroundColor: '#10b98115' }]}>
+              <Ionicons name="calendar" size={scale(14)} color="#10b981" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.infoCardLabel, { color: '#10b981' }]}>DATE</Text>
+              <Text style={[styles.infoCardValue, { color: theme.text }]}>
+                {date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+              </Text>
+            </View>
+            <Ionicons name={showDatePicker ? 'chevron-up' : 'chevron-down'} size={scale(13)} color="#10b981" />
+          </TouchableOpacity>
         </View>
-        
+
+        {/* Subject dropdown */}
+        {showSubjectPicker && teacherSubjectsList.length > 1 && (
+          <View style={[styles.compactDropdown, { backgroundColor: isDark ? '#374151' : '#fff', borderColor: theme.border }]}>
+            {teacherSubjectsList.map((subj: string, idx: number) => (
+              <TouchableOpacity
+                key={subj}
+                style={[
+                  styles.compactDropdownItem,
+                  { borderBottomColor: theme.border, borderBottomWidth: idx === teacherSubjectsList.length - 1 ? 0 : StyleSheet.hairlineWidth },
+                  selectedSubject === subj && { backgroundColor: 'rgba(99,102,241,0.07)' },
+                ]}
+                onPress={() => { setSelectedSubject(subj); setShowSubjectPicker(false); }}
+              >
+                <Text style={[styles.compactDropdownText, { color: selectedSubject === subj ? '#6366f1' : theme.text }]}>{subj}</Text>
+                {selectedSubject === subj && <Ionicons name="checkmark-circle" size={scale(15)} color="#6366f1" />}
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        {/* Calendar */}
         {showDatePicker && renderCustomCalendar()}
 
-        <Text style={[styles.label, { color: theme.textSecondary }]}>Details</Text>
-        <TextInput
-          style={[styles.compactTextArea, { backgroundColor: isDark ? '#1f2937' : '#f3f4f6', color: theme.text }]}
-          placeholder="Write homework or details..."
-          placeholderTextColor={theme.textTertiary}
-          value={details}
-          onChangeText={setDetails}
-          multiline
-          numberOfLines={4}
-          textAlignVertical="top"
-        />
+        {/* ── Audience Selector ── */}
+        <View style={[styles.audienceSelectorWrap, { backgroundColor: isDark ? '#1e293b' : '#fafafa', borderColor: theme.border }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: scale(8) }}>
+            <Ionicons name="people" size={scale(14)} color="#f59e0b" />
+            <Text style={[styles.sectionLabel, { color: theme.textSecondary, marginLeft: scale(6) }]}>AUDIENCE</Text>
+          </View>
+          <View style={{ flexDirection: 'row', gap: scale(8) }}>
+            {[
+              { label: 'Both', color: '#6366f1', icon: 'people' },
+              { label: 'Boys', color: '#3b82f6', icon: 'male' },
+              { label: 'Girls', color: '#ec4899', icon: 'female' },
+            ].map(opt => {
+              const isActive = audience === opt.label;
+              return (
+                <TouchableOpacity
+                  key={opt.label}
+                  style={[
+                    styles.audienceChip,
+                    { borderColor: opt.color + '40', backgroundColor: isActive ? opt.color : 'transparent' }
+                  ]}
+                  onPress={() => setAudience(opt.label)}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name={opt.icon as any} size={scale(12)} color={isActive ? '#fff' : opt.color} />
+                  <Text style={[styles.audienceChipText, { color: isActive ? '#fff' : opt.color }]}>{opt.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* ── Title Field ── */}
+        <View style={styles.fieldSection}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: scale(6) }}>
+            <Ionicons name="create-outline" size={scale(14)} color="#6366f1" />
+            <Text style={[styles.sectionLabel, { color: theme.textSecondary, marginLeft: scale(6) }]}>TITLE <Text style={{ color: '#ef4444' }}>*</Text></Text>
+          </View>
+          <View style={[styles.fieldBox, { borderColor: theme.border, backgroundColor: isDark ? '#1e293b' : '#fff' }]}>
+            <TextInput
+              style={[styles.fieldInput, { color: theme.text }]}
+              placeholder="e.g. Chapter 3 – Exercise 3.1"
+              placeholderTextColor={theme.textTertiary}
+              value={title}
+              onChangeText={setTitle}
+              returnKeyType="next"
+            />
+          </View>
+        </View>
+
+        {/* ── Details Field ── */}
+        <View style={styles.fieldSection}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: scale(6) }}>
+            <Ionicons name="document-text-outline" size={scale(14)} color="#6366f1" />
+            <Text style={[styles.sectionLabel, { color: theme.textSecondary, marginLeft: scale(6) }]}>DETAILS <Text style={{ color: '#ef4444' }}>*</Text></Text>
+          </View>
+          <View style={[styles.fieldBox, { borderColor: theme.border, backgroundColor: isDark ? '#1e293b' : '#fff', padding: 0 }]}>
+            <TextInput
+              style={[styles.detailsInput, { color: theme.text }]}
+              placeholder={"Write homework, class notes, or instructions...\n\nBe clear so students understand."}
+              placeholderTextColor={theme.textTertiary}
+              value={details}
+              onChangeText={setDetails}
+              multiline
+              textAlignVertical="top"
+            />
+          </View>
+        </View>
+
+        {/* ── Save Button moved to Footer ── */}
 
       </ScrollView>
 
-      <View style={[styles.modalFooter, { paddingBottom: 0 }]}>
-        <TouchableOpacity 
-          style={[styles.primaryButton, submitting && { opacity: 0.7 }]}
+      {/* ── Fixed Footer: Save Button pinned to keyboard edge ── */}
+      <View style={[styles.modalFooter, { backgroundColor: theme.card }]}>
+        <TouchableOpacity
+          style={[styles.saveButton, submitting && { opacity: 0.6 }, { marginTop: 0 }]}
           onPress={handleSave}
           disabled={submitting}
+          activeOpacity={0.87}
         >
           {submitting ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color="#fff" size="small" />
           ) : (
-            <Text style={styles.primaryButtonText}>Save Diary</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(8) }}>
+              <Ionicons name={editingEntryId ? 'checkmark-circle' : 'save'} size={scale(18)} color="#fff" />
+              <Text style={styles.saveButtonText}>{editingEntryId ? 'Update Entry' : 'Save Diary Entry'}</Text>
+            </View>
           )}
         </TouchableOpacity>
       </View>
-    </>
+
+    </View>
   );
 
   return (
@@ -556,7 +604,7 @@ export const ClassDiaryScreen: React.FC = () => {
         />
       )}
 
-      {/* Add Diary Modal */}
+      {/* Add Diary Modal — truly full screen, keyboard-aware, no gap */}
       <Modal
         visible={modalVisible}
         animationType="slide"
@@ -564,11 +612,18 @@ export const ClassDiaryScreen: React.FC = () => {
         onRequestClose={() => setModalVisible(false)}
         statusBarTranslucent={true}
       >
-        <View style={styles.modalOverlay}>
-          <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setModalVisible(false)} />
-          <View style={[styles.modalContent, { backgroundColor: theme.card }]}>
-            {renderModalContent()}
-          </View>
+        <View style={{ flex: 1, backgroundColor: theme.card }}>
+          <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            keyboardVerticalOffset={0}
+          >
+            <View style={[styles.modalContent, { backgroundColor: theme.card, flex: 1 }]}>
+              {renderModalContent()}
+            </View>
+          </KeyboardAvoidingView>
+          </SafeAreaView>
         </View>
       </Modal>
     </SafeAreaView>
@@ -594,7 +649,7 @@ const styles = StyleSheet.create({
   emptyText: { marginTop: scale(10), fontSize: scale(14), fontWeight: '500' },
   listContainer: { padding: scale(16), paddingBottom: scale(100) },
   
-  dateStrip:        { borderBottomWidth: 1, maxHeight: scale(54) },
+  dateStrip: { borderBottomWidth: 1, maxHeight: scale(54) },
   dateStripContent: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: scale(10), paddingVertical: scale(4) },
   dateCell: { flex: 1, alignItems: 'center', borderRadius: scale(6), borderWidth: 1, paddingVertical: scale(4), marginHorizontal: scale(2), overflow: 'hidden', position: 'relative' },
   dateCellDay: { fontSize: scale(8),  fontWeight: '700' },
@@ -624,6 +679,8 @@ const styles = StyleSheet.create({
     marginRight: scale(10),
   },
   cardTitle: { fontSize: scale(14), fontWeight: '700', flexShrink: 1 },
+  audienceBadge: { paddingHorizontal: scale(6), paddingVertical: scale(2), borderRadius: scale(4), marginLeft: scale(6) },
+  audienceBadgeText: { fontSize: scale(9), fontWeight: '700', textTransform: 'uppercase' },
   cardSubtitle: { fontSize: scale(11), fontWeight: '500' },
   cardDate: { fontSize: scale(10), fontWeight: '500' },
   actionButtonsRow: {
@@ -636,154 +693,208 @@ const styles = StyleSheet.create({
   },
   cardDetails: { fontSize: scale(12), lineHeight: scale(18) },
 
+  // ── Modal overlay & shell ──────────────────────────
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.45)',
   },
   modalContent: {
-    borderTopLeftRadius: scale(24),
-    borderTopRightRadius: scale(24),
-    maxHeight: '90%',
+    flex: 1,
+    overflow: 'hidden',
   },
+
+  // ── Drag handle ────────────────────────────────────
+  dragHandleWrap: { alignItems: 'center', paddingTop: scale(2), paddingBottom: scale(2) },
+  dragHandle: { width: scale(32), height: scale(3), borderRadius: scale(2) },
+
+  // ── Header ─────────────────────────────────────────
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: scale(20),
-    paddingVertical: scale(16),
-    borderBottomWidth: 1,
-  },
-  modalTitle: { fontSize: scale(18), fontWeight: '700' },
-  subjectBadge: {
-    backgroundColor: 'rgba(99, 102, 241, 0.1)',
-    paddingHorizontal: scale(8),
-    paddingVertical: scale(3),
-    borderRadius: scale(6),
-    marginTop: scale(4),
-    alignSelf: 'flex-start',
-  },
-  subjectBadgeText: { color: '#6366f1', fontSize: scale(11), fontWeight: '600' },
-  closeButton: {
-    backgroundColor: 'rgba(156, 163, 175, 0.15)',
-    padding: scale(6),
-    borderRadius: scale(20),
-  },
-  modalBody: { paddingHorizontal: scale(16), paddingTop: scale(16), paddingBottom: scale(20) },
-  modalFooter: {
     paddingHorizontal: scale(16),
-    paddingTop: scale(12),
-    borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
+    paddingVertical: scale(5),
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  label: { fontSize: scale(12), fontWeight: '600', marginBottom: scale(4), marginLeft: scale(2) },
-  compactInput: {
-    borderRadius: scale(10),
+  modalHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: scale(10) },
+  modalIconWrap: {
+    width: scale(30),
+    height: scale(30),
+    borderRadius: scale(8),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalTitle: { fontSize: scale(15), fontWeight: '700', letterSpacing: -0.3 },
+  modalSubtitle: { fontSize: scale(11), fontWeight: '500', marginTop: scale(1) },
+  closeButton: {
+    width: scale(30),
+    height: scale(30),
+    borderRadius: scale(15),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // ── Body ───────────────────────────────────
+  modalBody: {
     paddingHorizontal: scale(12),
-    paddingVertical: scale(10),
-    fontSize: scale(14),
-    marginBottom: scale(12),
+    paddingTop: scale(10),
+    gap: scale(8),
   },
-  compactDateRow: {
+
+  // Removed obsolete halfCell
+
+  // ── Compact dropdown (subject list) ──────────────
+  compactDropdown: {
+    borderRadius: scale(10),
+    borderWidth: 1,
+    overflow: 'hidden',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 4,
+  },
+  compactDropdownItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: scale(10),
-    paddingHorizontal: scale(12),
+    justifyContent: 'space-between',
     paddingVertical: scale(10),
-    marginBottom: scale(12),
+    paddingHorizontal: scale(12),
   },
-  compactTextArea: {
-    borderRadius: scale(10),
-    paddingHorizontal: scale(12),
-    paddingVertical: scale(10),
-    fontSize: scale(14),
-    height: scale(70),
+  compactDropdownText: { fontSize: scale(13), fontWeight: '500' },
+
+  // ── Info Cards (Subject / Date) ──────────────
+  rowTwo: {
+    flexDirection: 'row',
+    gap: scale(10),
     marginBottom: scale(16),
   },
-  primaryButton: {
+  infoCard: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: scale(10),
+    borderRadius: scale(12),
+    borderWidth: 1,
+    gap: scale(8),
+  },
+  infoCardIcon: {
+    width: scale(28),
+    height: scale(28),
+    borderRadius: scale(8),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  infoCardLabel: {
+    fontSize: scale(9),
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    marginBottom: scale(2),
+  },
+  infoCardValue: {
+    fontSize: scale(13),
+    fontWeight: '600',
+  },
+
+  // ── Audience Selector ──────────────
+  audienceSelectorWrap: {
+    padding: scale(12),
+    borderRadius: scale(12),
+    borderWidth: 1,
+    marginBottom: scale(16),
+  },
+  sectionLabel: {
+    fontSize: scale(10),
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  audienceChip: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: scale(8),
+    borderRadius: scale(8),
+    borderWidth: 1,
+    gap: scale(4),
+  },
+  audienceChipText: {
+    fontSize: scale(12),
+    fontWeight: '600',
+  },
+
+  // ── Field Sections (Title & Details) ──────────────
+  fieldSection: {
+    marginBottom: scale(16),
+  },
+  fieldBox: {
+    borderRadius: scale(12),
+    borderWidth: 1,
+    paddingHorizontal: scale(12),
+    paddingVertical: scale(8),
+  },
+  fieldInput: {
+    fontSize: scale(14),
+    fontWeight: '500',
+    minHeight: scale(28),
+    paddingVertical: scale(4),
+  },
+  detailsInput: {
+    fontSize: scale(14),
+    fontWeight: '400',
+    minHeight: scale(140),
+    paddingVertical: scale(12),
+    paddingHorizontal: scale(12),
+    lineHeight: scale(22),
+  },
+
+  // ── Save Button ──────────────
+  saveButton: {
     backgroundColor: '#6366f1',
-    borderRadius: scale(14),
+    borderRadius: scale(12),
     paddingVertical: scale(14),
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: scale(8),
     shadowColor: '#6366f1',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   },
-  primaryButtonText: { color: '#fff', fontSize: scale(15), fontWeight: '700' },
-  
-  calendarContainer: {
-    borderWidth: 1,
-    borderRadius: scale(12),
-    padding: scale(12),
-    marginBottom: scale(16),
-  },
-  calendarHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: scale(16),
-  },
-  calendarMonthText: {
-    fontSize: scale(16),
-    fontWeight: '700',
-  },
-  weekDaysRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: scale(8),
-  },
-  weekDayText: {
-    fontSize: scale(12),
-    fontWeight: '700',
-    width: scale(30),
-    textAlign: 'center',
-  },
-  daysGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  dayCell: {
-    width: '14.28%',
-    height: scale(36),
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  dayText: {
+  saveButtonText: {
+    color: '#fff',
     fontSize: scale(14),
-    fontWeight: '500',
-  },
-  audienceBadge: {
-    paddingHorizontal: scale(6),
-    paddingVertical: scale(2),
-    borderRadius: scale(4),
-    marginLeft: scale(6),
-  },
-  audienceBadgeText: {
-    fontSize: scale(9),
     fontWeight: '700',
+    letterSpacing: -0.2,
   },
-  dropdownMenu: {
-    position: 'absolute',
-    top: scale(65),
-    left: 0,
-    right: 0,
-    borderRadius: scale(10),
-    borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
-    zIndex: 100,
+  modalFooter: {
+    padding: scale(16),
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(0,0,0,0.1)',
   },
-  dropdownItem: {
-    paddingVertical: scale(10),
-    paddingHorizontal: scale(12),
-    borderBottomWidth: 1,
-  },
+
+  // ── Calendar ───────────────────────────────────────
+  calendarContainer: { borderWidth: 1, borderRadius: scale(12), padding: scale(10), marginVertical: scale(2), marginBottom: scale(16) },
+  calendarHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: scale(10) },
+  calendarMonthText: { fontSize: scale(13), fontWeight: '700' },
+  weekDaysRow: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: scale(4) },
+  weekDayText: { fontSize: scale(10), fontWeight: '700', width: scale(30), textAlign: 'center' },
+  daysGrid: { flexDirection: 'row', flexWrap: 'wrap' },
+  dayCell: { width: '14.28%', height: scale(32), justifyContent: 'center', alignItems: 'center' },
+  dayText: { fontSize: scale(12), fontWeight: '500' },
+
+  // ── Legacy stubs (kept for safety) ─────────────────
+  label: { fontSize: scale(12), fontWeight: '600', marginBottom: scale(4), marginLeft: scale(2) },
+  subjectBadge: { backgroundColor: 'rgba(99,102,241,0.1)', paddingHorizontal: scale(8), paddingVertical: scale(3), borderRadius: scale(6), marginTop: scale(4), alignSelf: 'flex-start' },
+  subjectBadgeText: { color: '#6366f1', fontSize: scale(11), fontWeight: '600' },
+  inlineDropdown: { borderRadius: scale(8), borderWidth: 1, marginTop: scale(4), overflow: 'hidden', elevation: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 4 },
+  inlineDropdownItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: scale(10), paddingHorizontal: scale(12) },
+  inlineDropdownText: { fontSize: scale(13), fontWeight: '500' },
+
+  segmentedControl: { flexDirection: 'row', borderRadius: scale(8), padding: scale(2), marginTop: scale(2) },
+  segmentTab: { flex: 1, paddingVertical: scale(6), borderRadius: scale(6), alignItems: 'center', justifyContent: 'center' },
+  segmentText: { fontSize: scale(12) },
 });
 
 export default ClassDiaryScreen;

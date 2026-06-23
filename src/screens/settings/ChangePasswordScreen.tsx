@@ -3,8 +3,9 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { auth } from '../../api/firebaseConfig';
+import { auth, db } from '../../api/firebaseConfig';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
+import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
 import { useTheme } from '../../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -80,6 +81,17 @@ const ChangePasswordScreen = () => {
       }
 
       await updatePassword(user, newPassword);
+
+      try {
+        const staffQuery = query(collection(db, 'staff'), where('uid', '==', user.uid));
+        const staffSnap = await getDocs(staffQuery);
+        if (!staffSnap.empty) {
+          const staffDoc = staffSnap.docs[0];
+          await updateDoc(doc(db, 'staff', staffDoc.id), { password: newPassword });
+        }
+      } catch (staffError) {
+        console.error('Failed to update password in staff collection:', staffError);
+      }
 
       Alert.alert('Success', 'Password updated successfully.', [
         { text: 'OK', onPress: () => navigation.goBack() }

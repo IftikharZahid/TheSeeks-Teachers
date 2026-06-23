@@ -160,8 +160,28 @@ export const TeacherDashboardScreen: React.FC = () => {
     const teacherName = (profileData?.fullname || user?.displayName || '').trim().toLowerCase();
     
     if (!teacherName || !timetableData[todayStr]) return [];
-    
-    return timetableData[todayStr].filter(session => (session.instructor || '').trim().toLowerCase() === teacherName)
+
+    // Build a canonical key set from Monday (master list used by admin dashboard).
+    // Orphaned entries deleted from Monday but still in other day documents
+    // are excluded to keep the schedule in sync with the admin panel.
+    const mondaySessions = timetableData['Monday'] || [];
+    const mondayKeys = new Set(
+      mondaySessions.map(s => `${(s.subject || '').toLowerCase()}|${(s.className || (s as any).class || '').toLowerCase()}|${s.lectureNumber || ''}`)
+    );
+
+    return timetableData[todayStr].filter(session => {
+        const hasInstructor = (session.instructor || '').trim().toLowerCase() === teacherName;
+        const hasSubject = !!(session.subject || (session as any).subjectName || '').trim();
+        const hasClass = !!(session.className || (session as any).class || '').trim();
+        if (!hasInstructor || !hasSubject || !hasClass) return false;
+
+        // Cross-reference against Monday if Monday data is available
+        if (mondaySessions.length > 0 && todayStr !== 'Monday') {
+          const key = `${(session.subject || '').toLowerCase()}|${(session.className || (session as any).class || '').toLowerCase()}|${session.lectureNumber || ''}`;
+          if (!mondayKeys.has(key)) return false; // Orphaned entry — skip
+        }
+        return true;
+    })
       .sort((a, b) => {
         // Simple string compare of start time assuming HH:MM format
         return (a.time || '').localeCompare(b.time || '');
@@ -213,7 +233,8 @@ export const TeacherDashboardScreen: React.FC = () => {
     if (teacherStudentIds.size === 0) return 0;
 
     // 3. Count how many of those students are marked 'present' today
-    const todayStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const d = new Date();
+    const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     let presentCount = 0;
     teacherStudentIds.forEach(sid => {
       if (attendanceDb[sid]?.[todayStr] === 'present') presentCount++;
@@ -319,8 +340,8 @@ export const TeacherDashboardScreen: React.FC = () => {
               resizeMode="contain"
             />
             <View style={{ justifyContent: 'center' }}>
-              <Text style={styles.headerTitle}>The Seeks Academy</Text>
-              <Text style={styles.headerSubtitle}>Fort Abbas</Text>
+              <Text style={styles.headerTitle}>THE SEEKS ACADEMY</Text>
+              <Text style={styles.headerSubtitle}>FORT ABBAS</Text>
             </View>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(5) }}>
@@ -633,7 +654,21 @@ export const TeacherDashboardScreen: React.FC = () => {
               <Text style={[styles.overviewStatus, { color: '#22c55e' }]}>Attendance</Text>
             </TouchableOpacity>
 
-            {/* Card 3 — Total Assignments (from assignmentsSlice Redux) */}
+            {/* Card 3 — e-Library (total materials from notificationsSlice Redux) */}
+            <TouchableOpacity 
+              activeOpacity={0.7}
+              onPress={() => handleNavigate('LibraryScreen')}
+              style={[styles.overviewCard, { backgroundColor: isDark ? theme.card : '#eff6ff', borderColor: isDark ? theme.border : '#dbeafe' }]}
+            >
+              <View style={[styles.overviewIconWrap, { backgroundColor: isDark ? 'rgba(59,130,246,0.1)' : '#dbeafe' }]}>
+                <Ionicons name="library" size={18} color="#3b82f6" />
+              </View>
+              <Text style={[styles.overviewValue, { color: theme.text }]}>{totalLibraryItems}</Text>
+              <Text style={[styles.overviewLabel, { color: theme.textSecondary }]}>e-Library</Text>
+              <Text style={[styles.overviewStatus, { color: '#3b82f6' }]}>{unreadNotices > 0 ? `${unreadNotices} New` : 'Materials'}</Text>
+            </TouchableOpacity>
+
+            {/* Card 4 — Total Assignments (from assignmentsSlice Redux) */}
             <TouchableOpacity 
               activeOpacity={0.7}
               onPress={() => handleNavigate('TeacherAssignmentsScreen')}
@@ -648,20 +683,6 @@ export const TeacherDashboardScreen: React.FC = () => {
               }
               <Text style={[styles.overviewLabel, { color: theme.textSecondary }]}>Total Assignments</Text>
               <Text style={[styles.overviewStatus, { color: '#f97316' }]}>Active</Text>
-            </TouchableOpacity>
-
-            {/* Card 4 — e-Library (total materials from notificationsSlice Redux) */}
-            <TouchableOpacity 
-              activeOpacity={0.7}
-              onPress={() => handleNavigate('LibraryScreen')}
-              style={[styles.overviewCard, { backgroundColor: isDark ? theme.card : '#eff6ff', borderColor: isDark ? theme.border : '#dbeafe' }]}
-            >
-              <View style={[styles.overviewIconWrap, { backgroundColor: isDark ? 'rgba(59,130,246,0.1)' : '#dbeafe' }]}>
-                <Ionicons name="library" size={18} color="#3b82f6" />
-              </View>
-              <Text style={[styles.overviewValue, { color: theme.text }]}>{totalLibraryItems}</Text>
-              <Text style={[styles.overviewLabel, { color: theme.textSecondary }]}>e-Library</Text>
-              <Text style={[styles.overviewStatus, { color: '#3b82f6' }]}>{unreadNotices > 0 ? `${unreadNotices} New` : 'Materials'}</Text>
             </TouchableOpacity>
           </ScrollView>
 
@@ -771,9 +792,9 @@ export const TeacherDashboardScreen: React.FC = () => {
           </View>
 
           {/* Footer Banner */}
-          <View style={styles.footerBanner}>
+          <View style={[styles.footerBanner, { backgroundColor: isDark ? theme.card : '#0f172a', borderColor: isDark ? theme.border : 'transparent', borderWidth: isDark ? 1 : 0 }]}>
             <Ionicons name="ribbon" size={16} color="#fbbf24" />
-            <Text style={styles.footerText}>Empowering Education, Inspiring Futures.</Text>
+            <Text style={[styles.footerText, { color: isDark ? theme.textSecondary : '#e2e8f0' }]}>Empowering Education, Inspiring Futures.</Text>
             <Text style={styles.footerYearText}>{academicYearText}</Text>
           </View>
 
@@ -939,7 +960,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    marginLeft: scale(5),
+    marginLeft: scale(1),
   },
   headerLogo: {
     width: scale(44),
@@ -948,7 +969,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     color: '#fff',
-    fontSize: scale(18),
+    fontSize: scale(17.2),
     fontWeight: '700',
     letterSpacing: 0.2,
   },
@@ -957,7 +978,11 @@ const styles = StyleSheet.create({
     fontSize: scale(11),
     fontWeight: '500',
     marginTop: scale(2),
+    alignSelf: 'flex-end',
+    letterSpacing: 0.5,
   },
+
+
   headerIconBtnTransparent: {
     width: scale(36),
     height: scale(36),

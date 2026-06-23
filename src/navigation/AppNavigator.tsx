@@ -16,7 +16,7 @@ import { AdminTimetableScreen } from "../screens/academics/TimetableScreen";
 import { AdminTeachersScreen } from "../screens/users/TeachersScreen";
 import { AdminVideoGalleryScreen } from "../screens/media/VideoGalleryScreen";
 import { AdminStudentRecordsScreen } from "../screens/users/StudentRecordsScreen";
-import { AdminFeeScreen } from "../screens/finance/FeeScreen";
+
 
 import { AdminAttendanceScreen } from "../screens/academics/AttendanceScreen";
 import { StudentProfile } from "../screens/users/TeacherProfile";
@@ -58,7 +58,7 @@ export type RootStackParamList = {
   AdminVideoGallery: undefined;
   AdminStudentRecords: undefined;
   AdminExams: undefined;
-  AdminFeeScreen: undefined;
+
   
   AdminAttendanceScreen: { selectedClass?: string } | undefined;
   StudentProfile: { student: any };
@@ -149,7 +149,7 @@ export const AppNavigator: React.FC = () => {
               <Stack.Screen name="AdminTeachers" component={AdminTeachersScreen} />
               <Stack.Screen name="AdminVideoGallery" component={AdminVideoGalleryScreen} />
               <Stack.Screen name="AdminStudentRecords" component={AdminStudentRecordsScreen} />
-              <Stack.Screen name="AdminFeeScreen" component={AdminFeeScreen} />
+
               
               <Stack.Screen name="AdminAttendanceScreen" component={AdminAttendanceScreen} />
               <Stack.Screen name="StudentProfile" component={StudentProfile} />
