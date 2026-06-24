@@ -89,9 +89,9 @@ export const TeacherSuggestionsScreen: React.FC = () => {
           />
 
           <Text style={[styles.inputLabel, { color: theme.text, marginTop: scale(16) }]}>Detailed Suggestion</Text>
-          <View style={{ flex: 1 }}>
+          <View>
             <TextInput
-              style={[styles.textArea, { backgroundColor: theme.card, color: theme.text, borderColor: theme.border, flex: 1 }]}
+              style={[styles.textArea, { backgroundColor: theme.card, color: theme.text, borderColor: theme.border }]}
               placeholder="Explain your suggestion in detail..."
               placeholderTextColor={theme.textSecondary + '80'}
               value={suggestion}

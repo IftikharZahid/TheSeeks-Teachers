@@ -1547,7 +1547,7 @@ export const GenericExamsScreen: React.FC = () => {
       <Modal visible={modalVisible} animationType="slide" transparent={true} statusBarTranslucent={true}>
         <View style={{ flex: 1, backgroundColor: theme.card }}>
           <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-            <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+            <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
               <View style={{ flex: 1, backgroundColor: theme.background }}>
                 <View style={{ flex: 1, paddingTop: scale(10) }}>
             {/* Header */}

@@ -190,7 +190,7 @@ export const TeacherAssignmentsScreen: React.FC = () => {
       <Modal visible={showModal} transparent={true} animationType="slide" onRequestClose={() => setShowModal(false)} statusBarTranslucent={true}>
         <View style={{ flex: 1, backgroundColor: theme.card }}>
           <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-            <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={0}>
+            <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding" keyboardVerticalOffset={0}>
               <View style={[styles.modalContentFullScreen, { backgroundColor: theme.card }]}>
                 <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
                   <Text style={[styles.modalTitle, { color: theme.text }]}>Add Assignment</Text>

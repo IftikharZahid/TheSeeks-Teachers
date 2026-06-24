@@ -616,7 +616,7 @@ export const ClassDiaryScreen: React.FC = () => {
           <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
           <KeyboardAvoidingView
             style={{ flex: 1 }}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            behavior="padding"
             keyboardVerticalOffset={0}
           >
             <View style={[styles.modalContent, { backgroundColor: theme.card, flex: 1 }]}>
