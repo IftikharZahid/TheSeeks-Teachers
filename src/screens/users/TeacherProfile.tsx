@@ -68,7 +68,7 @@ export const StudentProfile: React.FC = () => {
   const feeLabel = student.feeStatus || 'N/A';
 
   // Hero top padding: status bar height + breathing room
-  const statusBarH = Platform.OS === 'android' ? StatusBar.currentHeight ?? 24 : 44;
+  const statusBarH = StatusBar.currentHeight ?? 24;
   const heroPaddingTop = statusBarH + scale(12);
 
   return (

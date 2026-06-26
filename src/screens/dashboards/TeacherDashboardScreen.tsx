@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator, RefreshControl, Linking, Dimensions, Modal, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator, RefreshControl, Linking, Dimensions, Modal, TouchableWithoutFeedback, Animated, StatusBar } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -60,6 +60,64 @@ const quickActions = [
   { key: 'suggestions', label: 'Suggestions', icon: 'bulb' as const, color: '#f59e0b', bg: '#fffbeb', screen: 'TeacherSuggestionsScreen', root: true },
 ];
 
+const selectTeacherTimetable = (state: RootState) => state.admin.timetable;
+
+const BlinkingNotification: React.FC<{
+  subject: string;
+  clsName: string;
+  sectionInfo: string;
+  displayTime: string;
+  isDark: boolean;
+  theme: any;
+}> = ({ subject, clsName, sectionInfo, displayTime, isDark, theme }) => {
+  const opacity = useRef(new Animated.Value(0.1)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, { toValue: 1, duration: 400, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0.1, duration: 400, useNativeDriver: true })
+      ])
+    ).start();
+  }, [opacity]);
+
+  return (
+    <View style={{ marginHorizontal: scale(16), marginTop: scale(10) }}>
+      <View style={{
+        backgroundColor: isDark ? 'rgba(59,130,246,0.1)' : '#f0fdfa',
+        borderRadius: scale(8),
+        paddingVertical: scale(6),
+        paddingHorizontal: scale(10),
+        borderWidth: 1,
+        borderColor: isDark ? 'rgba(59,130,246,0.2)' : '#ccfbf1',
+        flexDirection: 'row',
+        alignItems: 'center',
+      }}>
+        <Animated.View style={{ opacity, flexDirection: 'row', alignItems: 'center', marginRight: scale(6) }}>
+          <View style={{ width: scale(6), height: scale(6), borderRadius: scale(3), backgroundColor: '#ef4444', marginRight: scale(4) }} />
+          <Text style={{ fontSize: scale(9), color: isDark ? '#ef4444' : '#ef4444', fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.5 }}>Active</Text>
+        </Animated.View>
+        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+          <Text style={{ fontSize: scale(11), color: theme.text, fontWeight: '700', flex: 1 }} numberOfLines={1}>
+            {subject} <Text style={{ fontWeight: '500', color: theme.textTertiary, fontSize: scale(10) }}>| {clsName}</Text>
+          </Text>
+        </View>
+
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(6) }}>
+          {!!sectionInfo && (
+            <View style={{ backgroundColor: isDark ? 'rgba(2,132,199,0.3)' : '#bae6fd', paddingHorizontal: scale(4), paddingVertical: scale(2), borderRadius: scale(4) }}>
+              <Text style={{ fontSize: scale(8), color: isDark ? '#bae6fd' : '#0369a1', fontWeight: '700' }}>{sectionInfo}</Text>
+            </View>
+          )}
+          <View style={{ backgroundColor: isDark ? 'rgba(14,165,233,0.15)' : '#e0f2fe', paddingHorizontal: scale(6), paddingVertical: scale(2), borderRadius: scale(4) }}>
+            <Text style={{ fontSize: scale(9), color: isDark ? '#7dd3fc' : '#0284c7', fontWeight: '800' }}>{displayTime}</Text>
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+};
+
 export const TeacherDashboardScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const dispatch = useAppDispatch();
@@ -96,7 +154,7 @@ export const TeacherDashboardScreen: React.FC = () => {
     ];
     dispatch(loadLastReadTimestamp());
     dispatch(fetchAllAttendanceRecords());
-    
+
     const rawTeacherName = profileData?.fullname || user?.displayName || 'Teacher';
     if (rawTeacherName) {
       dispatch(fetchTeacherAssignments({ teacherName: rawTeacherName, forceRefresh: false }));
@@ -127,7 +185,7 @@ export const TeacherDashboardScreen: React.FC = () => {
     ];
     dispatch(loadLastReadTimestamp());
     dispatch(fetchAllAttendanceRecords());
-    
+
     const rawTeacherName = profileData?.fullname || user?.displayName || 'Teacher';
     dispatch(fetchTeacherAssignments({ teacherName: rawTeacherName, forceRefresh: true }));
 
@@ -137,7 +195,7 @@ export const TeacherDashboardScreen: React.FC = () => {
 
   const totalClasses = useAppSelector(selectTotalClasses);
   const timetableData = useAppSelector(s => s.admin.timetable);
-  
+
   const teacherUniqueClassesCount = React.useMemo(() => {
     const classesSet = new Set<string>();
     const teacherNameLower = (profileData?.fullname || user?.displayName || '').trim().toLowerCase();
@@ -158,7 +216,7 @@ export const TeacherDashboardScreen: React.FC = () => {
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const todayStr = days[new Date().getDay()];
     const teacherName = (profileData?.fullname || user?.displayName || '').trim().toLowerCase();
-    
+
     if (!teacherName || !timetableData[todayStr]) return [];
 
     // Build a canonical key set from Monday (master list used by admin dashboard).
@@ -170,17 +228,17 @@ export const TeacherDashboardScreen: React.FC = () => {
     );
 
     return timetableData[todayStr].filter(session => {
-        const hasInstructor = (session.instructor || '').trim().toLowerCase() === teacherName;
-        const hasSubject = !!(session.subject || (session as any).subjectName || '').trim();
-        const hasClass = !!(session.className || (session as any).class || '').trim();
-        if (!hasInstructor || !hasSubject || !hasClass) return false;
+      const hasInstructor = (session.instructor || '').trim().toLowerCase() === teacherName;
+      const hasSubject = !!(session.subject || (session as any).subjectName || '').trim();
+      const hasClass = !!(session.className || (session as any).class || '').trim();
+      if (!hasInstructor || !hasSubject || !hasClass) return false;
 
-        // Cross-reference against Monday if Monday data is available
-        if (mondaySessions.length > 0 && todayStr !== 'Monday') {
-          const key = `${(session.subject || '').toLowerCase()}|${(session.className || (session as any).class || '').toLowerCase()}|${session.lectureNumber || ''}`;
-          if (!mondayKeys.has(key)) return false; // Orphaned entry — skip
-        }
-        return true;
+      // Cross-reference against Monday if Monday data is available
+      if (mondaySessions.length > 0 && todayStr !== 'Monday') {
+        const key = `${(session.subject || '').toLowerCase()}|${(session.className || (session as any).class || '').toLowerCase()}|${session.lectureNumber || ''}`;
+        if (!mondayKeys.has(key)) return false; // Orphaned entry — skip
+      }
+      return true;
     })
       .sort((a, b) => {
         // Simple string compare of start time assuming HH:MM format
@@ -258,7 +316,7 @@ export const TeacherDashboardScreen: React.FC = () => {
       (async () => {
         try {
           if (bellSoundRef.current) {
-            await bellSoundRef.current.unloadAsync().catch(() => {});
+            await bellSoundRef.current.unloadAsync().catch(() => { });
             bellSoundRef.current = null;
           }
           const { sound } = await Audio.Sound.createAsync(
@@ -268,7 +326,7 @@ export const TeacherDashboardScreen: React.FC = () => {
           await sound.playAsync();
           sound.setOnPlaybackStatusUpdate((status: any) => {
             if (status.isLoaded && status.didJustFinish) {
-              sound.unloadAsync().catch(() => {});
+              sound.unloadAsync().catch(() => { });
               bellSoundRef.current = null;
             }
           });
@@ -280,7 +338,7 @@ export const TeacherDashboardScreen: React.FC = () => {
 
     return () => {
       if (bellSoundRef.current) {
-        bellSoundRef.current.unloadAsync().catch(() => {});
+        bellSoundRef.current.unloadAsync().catch(() => { });
         bellSoundRef.current = null;
       }
     };
@@ -320,12 +378,28 @@ export const TeacherDashboardScreen: React.FC = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: isDark ? theme.background : '#f8fafc' }]}>
-      {/* Top Banner: The Seeks academy style - using the exact provided background image */}
-      <Image
-        source={require('../../../assets/header_bg.png')}
-        style={styles.headerBackground}
-        resizeMode="cover"
-      />
+      <StatusBar backgroundColor="#1e3a8a" barStyle="light-content" translucent={false} />
+      {/* Top Banner: Curved blue background with watermark logo */}
+      <View style={{
+        position: 'absolute',
+        top: 0,
+        left: -scale(50),
+        right: -scale(50),
+        height: scale(240),
+        backgroundColor: '#1e3a8a', // Professional deep blue
+        borderBottomLeftRadius: scale(150),
+        borderBottomRightRadius: scale(150),
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingTop: scale(30),
+        overflow: 'hidden',
+      }}>
+        <Image
+          source={require('../../../assets/headericon.png')}
+          style={{ width: scale(200), height: scale(200), opacity: 0.08 }}
+          resizeMode="contain"
+        />
+      </View>
 
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right']}>
         {/* Header Content */}
@@ -335,7 +409,7 @@ export const TeacherDashboardScreen: React.FC = () => {
           </TouchableOpacity>
           <View style={styles.headerCenter}>
             <Image
-              source={require('../../../assets/the-seeks-logo.png')}
+              source={require('../../../assets/HomeScreenLogo.png')}
               style={styles.headerLogo}
               resizeMode="contain"
             />
@@ -349,7 +423,7 @@ export const TeacherDashboardScreen: React.FC = () => {
               <Ionicons name={isDark ? "sunny" : "moon"} size={scale(24)} color="#fff" />
             </TouchableOpacity>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => handleNavigate('LibraryScreen')}
               style={styles.headerIconBtnTransparent}
             >
@@ -391,8 +465,8 @@ export const TeacherDashboardScreen: React.FC = () => {
                     {/* Institute name row */}
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: scale(14) }}>
                       <Image
-                        source={require('../../../assets/the-seeks-logo.png')}
-                        style={{ width: scale(26), height: scale(26), resizeMode: 'contain', marginRight: scale(8) }}
+                        source={require('../../../assets/HomeScreenLogo.png')}
+                        style={{ width: scale(30), height: scale(30), resizeMode: 'contain', marginRight: scale(8) }}
                       />
                       <View>
                         <Text style={{ color: '#fff', fontSize: scale(12), fontWeight: '800', letterSpacing: 0.2 }}>The Seeks Academy</Text>
@@ -428,12 +502,12 @@ export const TeacherDashboardScreen: React.FC = () => {
                       <Text style={{ fontSize: scale(9), fontWeight: '700', color: theme.placeholder, letterSpacing: 1.0 }}>ACADEMIC</Text>
                     </View>
                     {[
-                      { icon: 'time-outline',          label: 'Timetable',    screen: 'AdminTimetable',              color: '#10b981' },
-                      { icon: 'people-outline',        label: 'Attendance',   screen: 'AttendanceClassesListScreen', color: '#f43f5e' },
-                      { icon: 'clipboard-outline',     label: 'Assignments',  screen: 'TeacherAssignmentsScreen',    color: '#ec4899' },
-                      { icon: 'document-text-outline', label: 'Exams',        screen: 'ClassesListScreen',           color: '#8b5cf6' },
-                      { icon: 'library-outline',       label: 'e-Library',    screen: 'LibraryScreen',              color: '#f59e0b' },
-                      { icon: 'book-outline',          label: 'Diary',        screen: 'DiaryScreen',                color: '#3b82f6' },
+                      { icon: 'time-outline', label: 'Timetable', screen: 'AdminTimetable', color: '#10b981' },
+                      { icon: 'people-outline', label: 'Attendance', screen: 'AttendanceClassesListScreen', color: '#f43f5e' },
+                      { icon: 'clipboard-outline', label: 'Assignments', screen: 'TeacherAssignmentsScreen', color: '#ec4899' },
+                      { icon: 'document-text-outline', label: 'Exams', screen: 'ClassesListScreen', color: '#8b5cf6' },
+                      { icon: 'library-outline', label: 'e-Library', screen: 'LibraryScreen', color: '#f59e0b' },
+                      { icon: 'book-outline', label: 'Diary', screen: 'DiaryScreen', color: '#3b82f6' },
                     ].map(item => (
                       <TouchableOpacity
                         key={item.screen}
@@ -457,8 +531,8 @@ export const TeacherDashboardScreen: React.FC = () => {
                       <Text style={{ fontSize: scale(9), fontWeight: '700', color: theme.placeholder, letterSpacing: 1.0 }}>COMMUNICATION</Text>
                     </View>
                     {[
-                      { icon: 'mail-outline',     label: 'Messages',    screen: 'MessagesScreen',          color: '#0ea5e9' },
-                      { icon: 'bulb-outline',     label: 'Suggestions', screen: 'TeacherSuggestionsScreen', color: '#f59e0b' },
+                      { icon: 'mail-outline', label: 'Messages', screen: 'MessagesScreen', color: '#0ea5e9' },
+                      { icon: 'bulb-outline', label: 'Suggestions', screen: 'TeacherSuggestionsScreen', color: '#f59e0b' },
                     ].map(item => (
                       <TouchableOpacity
                         key={item.screen}
@@ -482,8 +556,8 @@ export const TeacherDashboardScreen: React.FC = () => {
                       <Text style={{ fontSize: scale(9), fontWeight: '700', color: theme.placeholder, letterSpacing: 1.0 }}>ACCOUNT</Text>
                     </View>
                     {[
-                      { icon: 'person-outline',   label: 'My Profile', screen: 'ProfileScreen',  color: '#64748b' },
-                      { icon: 'settings-outline', label: 'Settings',   screen: 'SettingsScreen', color: '#64748b' },
+                      { icon: 'person-outline', label: 'My Profile', screen: 'ProfileScreen', color: '#64748b' },
+                      { icon: 'settings-outline', label: 'Settings', screen: 'SettingsScreen', color: '#64748b' },
                     ].map(item => (
                       <TouchableOpacity
                         key={item.screen}
@@ -607,6 +681,76 @@ export const TeacherDashboardScreen: React.FC = () => {
             </View>
           </View>
 
+          {/* Active Lecture Notification */}
+          {(() => {
+            if (todaysSchedule.length === 0) return null;
+            const now = new Date();
+            const currentMinutes = now.getHours() * 60 + now.getMinutes();
+            let activeIndex = -1;
+            for (let i = 0; i < todaysSchedule.length; i++) {
+              const session = todaysSchedule[i];
+              let start = (session as any).startTime || (session.time && session.time.includes('-') ? session.time.split('-')[0] : session.time);
+              let end = (session as any).endTime || (session.time && session.time.includes('-') ? session.time.split('-')[1] : null);
+              if (start && end) {
+                const startParts = start.trim().split(':');
+                const endParts = end.trim().split(':');
+                if (startParts.length >= 2 && endParts.length >= 2) {
+                  const startH = parseInt(startParts[0], 10);
+                  const startM = parseInt(startParts[1], 10);
+                  const endH = parseInt(endParts[0], 10);
+                  const endM = parseInt(endParts[1], 10);
+                  if (!isNaN(startH) && !isNaN(startM) && !isNaN(endH) && !isNaN(endM)) {
+                    const startTotal = startH * 60 + startM;
+                    const endTotal = endH * 60 + endM;
+                    if (currentMinutes >= startTotal && currentMinutes <= endTotal) {
+                      activeIndex = i;
+                      break;
+                    }
+                  }
+                }
+              }
+            }
+
+            if (activeIndex !== -1) {
+              const activeSession = todaysSchedule[activeIndex];
+              const formatTime = (time24: string) => {
+                if (!time24) return '';
+                const parts = time24.trim().split(':');
+                let h = parseInt(parts[0], 10);
+                if (isNaN(h)) return time24.trim();
+                let m = parts[1] || '00';
+                const isPM = h >= 12;
+                if (h > 12) h -= 12;
+                if (h === 0) h = 12;
+                return `${h}:${m} ${isPM ? 'PM' : 'AM'}`;
+              };
+
+              let displayTime = 'Time TBD';
+              let start = (activeSession as any).startTime || (activeSession.time && activeSession.time.includes('-') ? activeSession.time.split('-')[0] : activeSession.time);
+              let end = (activeSession as any).endTime || (activeSession.time && activeSession.time.includes('-') ? activeSession.time.split('-')[1] : null);
+
+              if (start && end) {
+                displayTime = `${formatTime(start)} - ${formatTime(end)}`;
+              } else if (start) {
+                displayTime = formatTime(start);
+              }
+
+              const clsName = activeSession.className || (activeSession as any).class || 'Unknown Class';
+              const subjectName = activeSession.subject || (activeSession as any).subjectName || 'Subject';
+
+              // Extract section/gender info
+              let sectionInfo = (activeSession as any).section || (activeSession as any).gender || '';
+              // Sometimes it's embedded in the className e.g. "10th Class Boys"
+              if (!sectionInfo && clsName.toLowerCase().includes('boys')) sectionInfo = 'Boys';
+              if (!sectionInfo && clsName.toLowerCase().includes('girls')) sectionInfo = 'Girls';
+              // Default fallback if still nothing
+              if (!sectionInfo) sectionInfo = 'General';
+
+              return <BlinkingNotification subject={subjectName} clsName={clsName.replace(/boys|girls/i, '').trim()} sectionInfo={sectionInfo} displayTime={displayTime} isDark={isDark} theme={theme} />;
+            }
+            return null;
+          })()}
+
           {/* Overview Section */}
           <View style={styles.sectionHeader}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(6) }}>
@@ -621,7 +765,7 @@ export const TeacherDashboardScreen: React.FC = () => {
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.overviewScroll}>
             {/* Card 1 — Classes Today (from timetable Redux) */}
-            <TouchableOpacity 
+            <TouchableOpacity
               activeOpacity={0.7}
               onPress={() => handleNavigate('AdminTimetable')}
               style={[styles.overviewCard, { backgroundColor: isDark ? theme.card : '#faf5ff', borderColor: isDark ? theme.border : '#f3e8ff' }]}
@@ -638,7 +782,7 @@ export const TeacherDashboardScreen: React.FC = () => {
             </TouchableOpacity>
 
             {/* Card 2 — Present Today (real attendance from Redux attendanceDb) */}
-            <TouchableOpacity 
+            <TouchableOpacity
               activeOpacity={0.7}
               onPress={() => handleNavigate('AttendanceClassesListScreen')}
               style={[styles.overviewCard, { backgroundColor: isDark ? theme.card : '#f0fdf4', borderColor: isDark ? theme.border : '#dcfce7' }]}
@@ -655,7 +799,7 @@ export const TeacherDashboardScreen: React.FC = () => {
             </TouchableOpacity>
 
             {/* Card 3 — e-Library (total materials from notificationsSlice Redux) */}
-            <TouchableOpacity 
+            <TouchableOpacity
               activeOpacity={0.7}
               onPress={() => handleNavigate('LibraryScreen')}
               style={[styles.overviewCard, { backgroundColor: isDark ? theme.card : '#eff6ff', borderColor: isDark ? theme.border : '#dbeafe' }]}
@@ -669,7 +813,7 @@ export const TeacherDashboardScreen: React.FC = () => {
             </TouchableOpacity>
 
             {/* Card 4 — Total Assignments (from assignmentsSlice Redux) */}
-            <TouchableOpacity 
+            <TouchableOpacity
               activeOpacity={0.7}
               onPress={() => handleNavigate('TeacherAssignmentsScreen')}
               style={[styles.overviewCard, { backgroundColor: isDark ? theme.card : '#fff7ed', borderColor: isDark ? theme.border : '#ffedd5' }]}
@@ -687,35 +831,64 @@ export const TeacherDashboardScreen: React.FC = () => {
           </ScrollView>
 
           {/* Quick Access Section */}
-          <View style={[styles.sectionHeader, { marginTop: scale(20) }]}>
+          <View style={[styles.sectionHeader, { marginTop: scale(12) }]}>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>Quick Access</Text>
           </View>
-          
-          <View style={styles.quickAccessGrid}>
-            {quickActions.map(item => {
-              const stat = statMap[item.key];
-              return (
-                <TouchableOpacity
-                  key={item.key}
-                  style={[styles.quickAccessItem, { backgroundColor: theme.card, borderColor: theme.border }]}
-                  activeOpacity={0.7}
-                  onPress={() => handleNavigate(item.screen, item.root)}
-                >
-                  <View style={[styles.quickIconBox, { backgroundColor: isDark ? item.color + '20' : item.bg }]}>
-                    <Ionicons name={item.icon} size={18} color={item.color} />
+
+          <View style={{ position: 'relative', marginVertical: scale(10) }}>
+            <View style={{ position: 'absolute', left: '50%', top: -scale(10), bottom: -scale(10), width: 2, backgroundColor: isDark ? 'rgba(59,130,246,0.3)' : 'rgba(59,130,246,0.3)', transform: [{ translateX: -1 }] }} />
+            <View style={{ position: 'absolute', left: '50%', top: -scale(10), width: scale(8), height: scale(8), borderRadius: scale(4), backgroundColor: '#f97316', transform: [{ translateX: -4 }] }} />
+            <View style={{ position: 'absolute', left: '50%', bottom: -scale(10), width: scale(8), height: scale(8), borderRadius: scale(4), backgroundColor: '#f97316', transform: [{ translateX: -4 }] }} />
+
+            <View style={styles.quickAccessGrid}>
+              {quickActions.map((item, index) => {
+                const stat = statMap[item.key];
+                const isLeft = index % 2 === 0;
+                return (
+                  <View key={item.key} style={[styles.quickAccessItem, { position: 'relative' }]}>
+                    <View style={{
+                      position: 'absolute',
+                      top: '50%',
+                      [isLeft ? 'right' : 'left']: -scale(22),
+                      width: scale(22),
+                      height: 2,
+                      backgroundColor: isDark ? 'rgba(59,130,246,0.3)' : 'rgba(59,130,246,0.3)',
+                      zIndex: -1,
+                    }} />
+                    <View style={{
+                      position: 'absolute',
+                      top: '50%',
+                      marginTop: -scale(4),
+                      [isLeft ? 'right' : 'left']: -scale(6),
+                      width: scale(8),
+                      height: scale(8),
+                      borderRadius: scale(4),
+                      backgroundColor: '#f97316',
+                      zIndex: 2,
+                    }} />
+
+                    <TouchableOpacity
+                      style={{ flex: 1, backgroundColor: theme.card, borderColor: theme.border, borderWidth: 1, borderRadius: scale(10), padding: scale(8), flexDirection: 'row', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: scale(1) }, shadowOpacity: 0.02, shadowRadius: 3, elevation: 1 }}
+                      activeOpacity={0.7}
+                      onPress={() => handleNavigate(item.screen, item.root)}
+                    >
+                      <View style={[styles.quickIconBox, { backgroundColor: isDark ? item.color + '20' : item.bg }]}>
+                        <Ionicons name={item.icon} size={18} color={item.color} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.quickLabel, { color: theme.text }]} numberOfLines={1}>{item.label}</Text>
+                        <Text style={[styles.quickStat, { color: item.color }]}>{stat.value}</Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
+                    </TouchableOpacity>
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.quickLabel, { color: theme.text }]} numberOfLines={1}>{item.label}</Text>
-                    <Text style={[styles.quickStat, { color: item.color }]}>{stat.value}</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
-                </TouchableOpacity>
-              );
-            })}
+                );
+              })}
+            </View>
           </View>
 
           {/* Today's Schedule Section */}
-          <View style={[styles.sectionHeader, { marginTop: scale(20) }]}>
+          <View style={[styles.sectionHeader, { marginTop: scale(12) }]}>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>Today's Schedule</Text>
             <TouchableOpacity onPress={() => handleNavigate('AdminTimetable')}>
               <Text style={styles.linkText}>View Timetable</Text>
@@ -724,12 +897,39 @@ export const TeacherDashboardScreen: React.FC = () => {
 
           <View style={styles.scheduleList}>
             {todaysSchedule.length === 0 ? (
-<View style={{ padding: scale(30), alignItems: 'center', backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)', borderRadius: scale(12), borderColor: theme.border, borderWidth: 1 }}>
+              <View style={{ padding: scale(30), alignItems: 'center', backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)', borderRadius: scale(12), borderColor: theme.border, borderWidth: 1 }}>
                 <Ionicons name="calendar-clear-outline" size={scale(40)} color={theme.textTertiary} />
                 <Text style={{ color: theme.textSecondary, marginTop: scale(12), fontSize: scale(14), fontWeight: '500' }}>No classes scheduled for today.</Text>
               </View>
-            ) : (
-              todaysSchedule.map((session: any, idx: number) => {
+            ) : (() => {
+              const now = new Date();
+              const currentMinutes = now.getHours() * 60 + now.getMinutes();
+              let activeIndex = -1;
+              for (let i = 0; i < todaysSchedule.length; i++) {
+                const session = todaysSchedule[i];
+                let start = (session as any).startTime || (session.time && session.time.includes('-') ? session.time.split('-')[0] : session.time);
+                let end = (session as any).endTime || (session.time && session.time.includes('-') ? session.time.split('-')[1] : null);
+                if (start && end) {
+                  const startParts = start.trim().split(':');
+                  const endParts = end.trim().split(':');
+                  if (startParts.length >= 2 && endParts.length >= 2) {
+                    const startH = parseInt(startParts[0], 10);
+                    const startM = parseInt(startParts[1], 10);
+                    const endH = parseInt(endParts[0], 10);
+                    const endM = parseInt(endParts[1], 10);
+                    if (!isNaN(startH) && !isNaN(startM) && !isNaN(endH) && !isNaN(endM)) {
+                      const startTotal = startH * 60 + startM;
+                      const endTotal = endH * 60 + endM;
+                      if (currentMinutes >= startTotal && currentMinutes <= endTotal) {
+                        activeIndex = i;
+                        break;
+                      }
+                    }
+                  }
+                }
+              }
+              return todaysSchedule.map((session: any, idx: number) => {
+                const isActive = idx === activeIndex;
                 const formatTime = (time24: string) => {
                   if (!time24) return '';
                   const parts = time24.trim().split(':');
@@ -745,7 +945,7 @@ export const TeacherDashboardScreen: React.FC = () => {
                 let displayTime = 'Time TBD';
                 let start = session.startTime || (session.time && session.time.includes('-') ? session.time.split('-')[0] : session.time);
                 let end = session.endTime || (session.time && session.time.includes('-') ? session.time.split('-')[1] : null);
-                
+
                 if (start && end) {
                   displayTime = `${formatTime(start)} - ${formatTime(end)}`;
                 } else if (start) {
@@ -754,41 +954,63 @@ export const TeacherDashboardScreen: React.FC = () => {
                     displayTime += ` - ${session.duration}`;
                   }
                 }
-  
+
                 return (
-                  <View key={idx} style={[styles.scheduleCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
-                    <View style={styles.scheduleLectureBox}>
-                      <Text style={styles.scheduleLectureLabel}>Lec</Text>
-                      <Text style={styles.scheduleLectureNumber}>{idx + 1}</Text>
+                  <View key={idx} style={{ flexDirection: 'row', alignItems: 'stretch' }}>
+                    <View style={{ width: scale(20), alignItems: 'center', marginRight: scale(6) }}>
+                      <View style={[{ width: scale(10), height: scale(10), borderRadius: scale(5), marginTop: scale(20), zIndex: 2 }, isActive ? { backgroundColor: '#f97316', transform: [{ scale: 1.3 }], shadowColor: '#f97316', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.6, shadowRadius: 4, elevation: 3 } : { backgroundColor: isDark ? '#9a3412' : '#fdba74' }]} />
+                      {idx < todaysSchedule.length - 1 && (
+                        <View style={{ position: 'absolute', top: scale(30), bottom: -scale(10), width: 2, backgroundColor: isActive ? theme.primary : (isDark ? 'rgba(59,130,246,0.3)' : 'rgba(59,130,246,0.3)'), opacity: isActive ? 0.8 : 1 }} />
+                      )}
                     </View>
-                    <View style={styles.scheduleInfo}>
-                      <View style={styles.scheduleRow}>
-                        <Text style={[styles.scheduleSubject, { color: theme.text }]} numberOfLines={1}>{session.subject || session.subjectName || 'N/A'}</Text>
-                        <View style={[styles.scheduleTimeWrap, { backgroundColor: isDark ? 'rgba(59,130,246,0.15)' : 'rgba(59,130,246,0.1)', paddingHorizontal: scale(8), paddingVertical: scale(4), borderRadius: scale(6) }]}>
-                          <Ionicons name="time" size={14} color={theme.primary || '#3b82f6'} style={{marginRight: scale(4)}} />
-                          <Text style={[styles.scheduleTimeRight, { color: theme.primary || '#3b82f6', fontWeight: '800', fontSize: scale(11) }]}>{displayTime}</Text>
+
+                    <View style={{ flex: 1 }}>
+                      <View style={[
+                        styles.scheduleCard,
+                        { backgroundColor: theme.card, borderColor: theme.border },
+                        isActive && styles.activeScheduleCard,
+                        isActive && { backgroundColor: isDark ? 'rgba(59,130,246,0.1)' : '#eff6ff', borderColor: theme.primary }
+                      ]}>
+                        <View style={[styles.scheduleLectureBox, isActive && { backgroundColor: theme.primary, borderColor: theme.primary }]}>
+                          <Text style={[styles.scheduleLectureLabel, isActive && { color: '#fff' }]}>Lec</Text>
+                          <Text style={[styles.scheduleLectureNumber, isActive && { color: '#fff' }]}>{idx + 1}</Text>
                         </View>
-                      </View>
-                      <View style={styles.scheduleRow}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: scale(6) }}>
-                          <Text style={[styles.scheduleClassBold, { color: theme.primary || '#3b82f6', flex: 0, flexShrink: 1 }]} numberOfLines={1}>
-                            {session.className || session.class || 'N/A'}
-                          </Text>
-                          {session.gender && session.gender !== 'All' && (
-                            <View style={{ backgroundColor: session.gender === 'Boys' ? 'rgba(37,99,235,0.1)' : 'rgba(219,39,119,0.1)', paddingHorizontal: scale(6), paddingVertical: scale(2), borderRadius: scale(4) }}>
-                              <Text style={{ fontSize: scale(9), fontWeight: '700', color: session.gender === 'Boys' ? '#3b82f6' : '#ec4899' }}>
-                                {session.gender}
-                              </Text>
+                        <View style={styles.scheduleInfo}>
+                          <View style={styles.scheduleRow}>
+                            <Text style={[styles.scheduleSubject, { color: theme.text }, isActive && { color: theme.primary }]} numberOfLines={2}>{session.subject || session.subjectName || 'N/A'}</Text>
+                            <View style={[styles.scheduleTimeWrap, { backgroundColor: isDark ? 'rgba(59,130,246,0.15)' : 'rgba(59,130,246,0.1)', paddingHorizontal: scale(8), paddingVertical: scale(4), borderRadius: scale(6) }]}>
+                              <Ionicons name="time" size={14} color={theme.primary || '#3b82f6'} style={{ marginRight: scale(4) }} />
+                              <Text style={[styles.scheduleTimeRight, { color: theme.primary || '#3b82f6', fontWeight: '800', fontSize: scale(11) }]}>{displayTime}</Text>
                             </View>
-                          )}
+                          </View>
+                          <View style={[styles.scheduleRow, { alignItems: 'center' }]}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: scale(6) }}>
+                              <Text style={[styles.scheduleClassBold, { color: isActive ? (theme.primary || '#3b82f6') : theme.textSecondary, flex: 0, flexShrink: 1 }]} numberOfLines={1}>
+                                {session.className || session.class || 'N/A'}
+                              </Text>
+                              {session.gender && session.gender !== 'All' && (
+                                <View style={{ backgroundColor: session.gender === 'Boys' ? 'rgba(37,99,235,0.1)' : 'rgba(219,39,119,0.1)', paddingHorizontal: scale(6), paddingVertical: scale(2), borderRadius: scale(4) }}>
+                                  <Text style={{ fontSize: scale(9), fontWeight: '700', color: session.gender === 'Boys' ? '#3b82f6' : '#ec4899' }}>
+                                    {session.gender}
+                                  </Text>
+                                </View>
+                              )}
+                            </View>
+                            {isActive ? (
+                              <View style={[styles.todayBadge, { backgroundColor: theme.primary }]}>
+                                <Text style={[styles.todayBadgeText, { color: '#fff' }]}>Ongoing / Next</Text>
+                              </View>
+                            ) : (
+                              <Text style={[styles.scheduleRoom, { color: theme.textSecondary }]} numberOfLines={1}>Room: {session.room || 'TBD'}</Text>
+                            )}
+                          </View>
                         </View>
-                        <Text style={[styles.scheduleRoom, { color: theme.textSecondary }]} numberOfLines={1}>Room: {session.room || 'TBD'}</Text>
                       </View>
                     </View>
                   </View>
                 );
               })
-            )}
+            })()}
           </View>
 
           {/* Footer Banner */}
@@ -1148,8 +1370,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginHorizontal: scale(16),
-    marginTop: scale(24),
-    marginBottom: scale(12),
+    marginTop: scale(14),
+    marginBottom: scale(8),
   },
   sectionTitle: {
     fontSize: scale(15),
@@ -1204,20 +1426,10 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     paddingHorizontal: scale(16),
     justifyContent: 'space-between',
-    rowGap: scale(10),
+    rowGap: scale(16),
   },
   quickAccessItem: {
-    width: '48%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: scale(8),
-    borderRadius: scale(10),
-    borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: scale(1) },
-    shadowOpacity: 0.02,
-    shadowRadius: 3,
-    elevation: 1,
+    width: '42%',
   },
   quickIconBox: {
     width: scale(32),
@@ -1240,12 +1452,12 @@ const styles = StyleSheet.create({
   // Schedule
   scheduleList: {
     paddingHorizontal: scale(16),
-    gap: scale(12),
+    gap: scale(10),
   },
   scheduleCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: scale(10),
+    padding: scale(6),
     borderRadius: scale(10),
     borderWidth: 1,
     shadowColor: '#000',
@@ -1254,14 +1466,21 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 1,
   },
+  activeScheduleCard: {
+    borderTopRightRadius: scale(24),
+    borderBottomLeftRadius: scale(24),
+    borderTopLeftRadius: scale(8),
+    borderBottomRightRadius: scale(8),
+    borderWidth: 1.5,
+  },
   scheduleLectureBox: {
     backgroundColor: '#eff6ff',
-    paddingVertical: scale(8),
-    paddingHorizontal: scale(14),
-    borderRadius: scale(10),
+    paddingVertical: scale(4),
+    paddingHorizontal: scale(10),
+    borderRadius: scale(8),
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: scale(12),
+    marginRight: scale(10),
     borderWidth: 1,
     borderColor: '#dbeafe',
   },
@@ -1273,7 +1492,7 @@ const styles = StyleSheet.create({
   },
   scheduleLectureNumber: {
     color: '#3b82f6',
-    fontSize: scale(18),
+    fontSize: scale(16),
     fontWeight: '900',
   },
   scheduleInfo: {
@@ -1283,11 +1502,11 @@ const styles = StyleSheet.create({
   scheduleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: scale(4),
+    alignItems: 'flex-start',
+    marginBottom: scale(2),
   },
   scheduleSubject: {
-    fontSize: scale(14),
+    fontSize: scale(13),
     fontWeight: '800',
     flex: 1,
     marginRight: scale(8),
@@ -1296,7 +1515,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: scale(6),
-    paddingVertical: scale(3),
+    paddingVertical: scale(2),
     borderRadius: scale(6),
   },
   scheduleTimeRight: {
@@ -1304,7 +1523,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   scheduleClassBold: {
-    fontSize: scale(12),
+    fontSize: scale(11),
     fontWeight: '800',
     flex: 1,
   },
@@ -1321,6 +1540,15 @@ const styles = StyleSheet.create({
   schedulePillText: {
     color: '#fff',
     fontSize: scale(11),
+    fontWeight: '700',
+  },
+  todayBadge: {
+    paddingHorizontal: scale(8),
+    paddingVertical: scale(4),
+    borderRadius: scale(6),
+  },
+  todayBadgeText: {
+    fontSize: scale(9),
     fontWeight: '700',
   },
 

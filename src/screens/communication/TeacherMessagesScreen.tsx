@@ -386,7 +386,7 @@ export const MessagesScreen: React.FC = () => {
     if (selectedMessage) {
       setShowActionSheet(false);
       // Slight delay ensures ActionSheet fully closes before Modal appears
-      setTimeout(() => setShowDeletePrompt(true), Platform.OS === 'ios' ? 350 : 50);
+      setTimeout(() => setShowDeletePrompt(true), 50);
     }
   };
 
@@ -416,8 +416,8 @@ export const MessagesScreen: React.FC = () => {
   const [keyboardVisible, setKeyboardVisible] = useState(false);
 
   useEffect(() => {
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showEvent = 'keyboardDidShow';
+    const hideEvent = 'keyboardDidHide';
 
     const showSub = Keyboard.addListener(showEvent, () => setKeyboardVisible(true));
     const hideSub = Keyboard.addListener(hideEvent, () => setKeyboardVisible(false));
@@ -1124,9 +1124,9 @@ export const MessagesScreen: React.FC = () => {
       */}
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + scale(60) : 0}
-        enabled={Platform.OS === 'ios' ? true : keyboardVisible}
+        behavior="padding"
+        keyboardVerticalOffset={0}
+        enabled={keyboardVisible}
       >
         <FlatList
           ref={flatListRef}
@@ -1755,7 +1755,7 @@ const styles = StyleSheet.create({
   bottomSheetContainer: {
     borderTopLeftRadius: scale(20),
     borderTopRightRadius: scale(20),
-    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
+    paddingBottom: 20,
     paddingHorizontal: scale(20),
     paddingTop: scale(12),
   },

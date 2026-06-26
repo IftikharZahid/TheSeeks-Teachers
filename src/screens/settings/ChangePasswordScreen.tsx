@@ -156,7 +156,7 @@ const ChangePasswordScreen = () => {
 
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior="height"
       >
         <ScrollView
           showsVerticalScrollIndicator={false}

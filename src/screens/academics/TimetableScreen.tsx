@@ -222,59 +222,66 @@ export const AdminTimetableScreen: React.FC = () => {
           )}
 
           <View style={styles.listContainer}>
-            {filteredEntries.map((e: any, index: number) => (
-              <View key={e.id || index} style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
-                {/* Period Number */}
-                <View style={[styles.periodBadge, { backgroundColor: theme.primary + '15' }]}>
-                  <Text style={[styles.periodNum, { color: theme.primary }]}>{e.period || '—'}</Text>
-                  <Text style={[styles.periodLabel, { color: theme.primary + 'AA' }]}>P</Text>
-                </View>
-
-                {/* Separator */}
-                <View style={[styles.separator, { backgroundColor: theme.border }]} />
-
-                {/* Main info */}
-                <View style={styles.cardMain}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(6), marginBottom: scale(3) }}>
-                    <Text style={[styles.subjectText, { color: theme.text }]} numberOfLines={1}>
-                      {e.subject}
-                    </Text>
+            {filteredEntries.map((e: any, index: number) => {
+              const isActive = false; // We can add current time check if needed, but for now just simple dots
+              return (
+                <View key={e.id || index} style={{ flexDirection: 'row', alignItems: 'stretch' }}>
+                  {/* Timeline Left */}
+                  <View style={{ width: scale(24), alignItems: 'center', marginRight: scale(4) }}>
+                    <View style={[{ width: scale(10), height: scale(10), borderRadius: scale(5), marginTop: scale(20), zIndex: 2, backgroundColor: isDark ? '#3b82f6' : '#60a5fa', shadowColor: '#3b82f6', shadowOffset: {width: 0, height: 0}, shadowOpacity: 0.5, shadowRadius: 3, elevation: 2 }]} />
+                    {index < filteredEntries.length - 1 && (
+                      <View style={{ position: 'absolute', top: scale(30), bottom: -scale(14), width: 2, backgroundColor: isDark ? 'rgba(59,130,246,0.3)' : 'rgba(59,130,246,0.3)' }} />
+                    )}
                   </View>
-                  <View style={styles.row}>
-                    <Ionicons name="time-outline" size={scale(11)} color={theme.textSecondary} />
-                    <Text style={[styles.metaText, { color: theme.textSecondary }]}>
-                      {(e.startTime || e.endTime)
-                        ? `${formatTime12Hour(e.startTime)}${e.endTime ? ` – ${formatTime12Hour(e.endTime)}` : ''}`
-                        : e.time || 'Time not set'}
-                    </Text>
-                  </View>
-                  {e.room ? (
-                    <View style={styles.row}>
-                      <Ionicons name="location-outline" size={scale(11)} color={theme.textSecondary} />
-                      <Text style={[styles.metaText, { color: theme.textSecondary }]}>Room {e.room}</Text>
+
+                  {/* Card Main */}
+                  <View style={{ flex: 1, marginBottom: scale(12) }}>
+                    <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                      {/* Period Badge */}
+                      <View style={[styles.periodBadge, { backgroundColor: isDark ? 'rgba(59,130,246,0.15)' : '#eff6ff', borderColor: theme.primary, borderWidth: 1 }]}>
+                        <Text style={[styles.periodLabel, { color: theme.primary }]}>Lec</Text>
+                        <Text style={[styles.periodNum, { color: theme.primary }]}>{e.period || '—'}</Text>
+                      </View>
+
+                      {/* Main Info */}
+                      <View style={styles.cardMain}>
+                        <Text style={[styles.subjectText, { color: theme.text }]} numberOfLines={1}>
+                          {e.subject}
+                        </Text>
+                        <View style={[styles.row, { marginTop: scale(4) }]}>
+                          <View style={{ backgroundColor: isDark ? 'rgba(59,130,246,0.1)' : '#eff6ff', paddingHorizontal: scale(6), paddingVertical: scale(3), borderRadius: scale(6), flexDirection: 'row', alignItems: 'center' }}>
+                            <Ionicons name="time" size={scale(10)} color={theme.primary} style={{ marginRight: scale(4) }} />
+                            <Text style={{ fontSize: scale(10), color: theme.primary, fontWeight: '800' }}>
+                              {(e.startTime || e.endTime)
+                                ? `${formatTime12Hour(e.startTime)}${e.endTime ? ` – ${formatTime12Hour(e.endTime)}` : ''}`
+                                : e.time || 'Time not set'}
+                            </Text>
+                          </View>
+                          {e.room ? (
+                            <Text style={[styles.metaText, { color: theme.textSecondary, marginLeft: scale(6) }]}>Room {e.room}</Text>
+                          ) : null}
+                        </View>
+                      </View>
+
+                      {/* Right Side Info */}
+                      <View style={{ alignItems: 'flex-end', justifyContent: 'center', gap: scale(4) }}>
+                        <Text style={{ color: theme.text, fontSize: scale(12), fontWeight: '800' }}>{e.class || '—'}</Text>
+                        {e.gender && e.gender !== 'All' && (
+                          <View style={{
+                            backgroundColor: e.gender === 'Boys' ? 'rgba(37,99,235,0.10)' : 'rgba(219,39,119,0.10)',
+                            paddingHorizontal: scale(6), paddingVertical: scale(2), borderRadius: scale(4),
+                          }}>
+                            <Text style={{ fontSize: scale(8), fontWeight: '800', color: e.gender === 'Boys' ? '#3b82f6' : '#ec4899' }}>
+                              {e.gender.toUpperCase()}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
                     </View>
-                  ) : null}
-                </View>
-
-                {/* Right Side: Gender and Class chip */}
-                <View style={{ alignItems: 'flex-end', gap: scale(6) }}>
-                  {e.gender && e.gender !== 'All' && (
-                    <View style={{
-                      backgroundColor: e.gender === 'Boys' ? 'rgba(37,99,235,0.10)' : 'rgba(219,39,119,0.10)',
-                      paddingHorizontal: scale(6), paddingVertical: scale(3), borderRadius: scale(4),
-                      borderWidth: 0.5, borderColor: e.gender === 'Boys' ? 'rgba(37,99,235,0.3)' : 'rgba(219,39,119,0.3)',
-                    }}>
-                      <Text style={{ fontSize: scale(9), fontWeight: '800', letterSpacing: 0.5, color: e.gender === 'Boys' ? '#3b82f6' : '#ec4899' }}>
-                        {e.gender.toUpperCase()}
-                      </Text>
-                    </View>
-                  )}
-                  <View style={[styles.classChip, { backgroundColor: theme.primary }]}>
-                    <Text style={styles.classChipText}>{e.class || '—'}</Text>
                   </View>
                 </View>
-              </View>
-            ))}
+              );
+            })}
           </View>
         </ScrollView>
       )}

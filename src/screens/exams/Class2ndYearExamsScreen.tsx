@@ -1527,7 +1527,7 @@ export const Class2ndYearExamsScreen: React.FC = () => {
               />
             )}
           />
-          <View style={{ paddingHorizontal: scale(10), paddingTop: scale(8), paddingBottom: Platform.OS === 'android' ? 28 : 12, borderTopWidth: 1, borderTopColor: theme.border }}>
+          <View style={{ paddingHorizontal: scale(10), paddingTop: scale(8), paddingBottom: 28, borderTopWidth: 1, borderTopColor: theme.border }}>
             <Text style={{ fontSize: scale(10), color: theme.textSecondary, textAlign: 'center', letterSpacing: 0.2 }}>
               Showing {Math.min(visibleCount, studentProgressList.length)} of {studentProgressList.length} students
             </Text>
@@ -1541,7 +1541,7 @@ export const Class2ndYearExamsScreen: React.FC = () => {
       <Modal visible={modalVisible} animationType="slide" transparent statusBarTranslucent>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior="height">
           <View style={{ flex: 1, backgroundColor: theme.background }}>
-            <View style={{ flex: 1, paddingTop: Platform.OS === 'ios' ? 48 : (StatusBar.currentHeight || 30) }}>
+            <View style={{ flex: 1, paddingTop: (StatusBar.currentHeight || 30) }}>
             {/* Header */}
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: scale(16), paddingVertical: scale(14), borderBottomWidth: 1, borderBottomColor: theme.border, backgroundColor: theme.card }}>
               <View>
@@ -1936,7 +1936,7 @@ export const Class2ndYearExamsScreen: React.FC = () => {
                 <DateTimePicker
                   value={date}
                   mode="date"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  display="default"
                   onChange={onDateChange}
                   maximumDate={new Date(2030, 11, 31)}
                   minimumDate={new Date(2020, 0, 1)}
@@ -2619,7 +2619,7 @@ const styles = StyleSheet.create({
   
   // ─── Full Screen Form ─────────────────────────────────────────────────────
   fullScreenModal: { flex: 1 },
-  fsFormHeader: { paddingTop: Platform.OS === 'ios' ? 48 : (StatusBar.currentHeight || 30) + 6, paddingBottom: scale(12), paddingHorizontal: scale(12), flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  fsFormHeader: { paddingTop: (StatusBar.currentHeight || 30) + 6, paddingBottom: scale(12), paddingHorizontal: scale(12), flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   fsFormHeaderBtn: { width: scale(32), height: scale(32), borderRadius: scale(16), backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
   fsFormHeaderCenter: { flex: 1, alignItems: 'center' },
   fsFormHeaderTitle: { fontSize: scale(16), fontWeight: '800', color: '#fff', letterSpacing: 0.1 },

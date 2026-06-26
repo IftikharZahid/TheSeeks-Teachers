@@ -50,7 +50,7 @@ export const HelpCenterScreen: React.FC = () => {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   const toggleFAQ = (index: number) => {
-    if (Platform.OS !== 'web') {
+    if (true) {
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     }
     setOpenIndex(openIndex === index ? null : index);

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, TextInput, Modal,
-  Platform, Animated, FlatList, ScrollView, ActivityIndicator, RefreshControl,
+  Platform, Animated, FlatList, ScrollView, ActivityIndicator, RefreshControl, StatusBar
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -566,6 +566,7 @@ export const AdminAttendanceScreen: React.FC = () => {
   /* ── Main Render ── */
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
+      <StatusBar backgroundColor={isDark ? '#1e293b' : '#4338ca'} barStyle="light-content" translucent={false} />
       <Animated.View style={{ opacity: fadeAnim }}>
         {/* Header */}
         <LinearGradient
@@ -868,7 +869,7 @@ const styles = StyleSheet.create({
   sheet:   { 
     borderRadius: scale(24), 
     marginHorizontal: scale(12),
-    marginBottom: Platform.OS === 'ios' ? scale(34) : scale(24),
+    marginBottom: scale(24),
     borderWidth: 1, 
     paddingHorizontal: scale(16), 
     paddingBottom: scale(20), 
@@ -904,7 +905,7 @@ const styles = StyleSheet.create({
   markAllSheet:      { 
     borderRadius: scale(24), 
     marginHorizontal: scale(12),
-    marginBottom: Platform.OS === 'ios' ? scale(34) : scale(24),
+    marginBottom: scale(24),
     borderWidth: 1, 
     paddingHorizontal: scale(20), 
     paddingBottom: scale(24), 

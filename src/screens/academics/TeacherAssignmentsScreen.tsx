@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, TextInput, ActivityIndicator, Alert, ScrollView, Platform, KeyboardAvoidingView, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, TextInput, ActivityIndicator, Alert, ScrollView, Platform, KeyboardAvoidingView, RefreshControl, StatusBar } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -109,9 +109,7 @@ export const TeacherAssignmentsScreen: React.FC = () => {
   };
 
   const handleDateChange = (event: any, date?: Date) => {
-    if (Platform.OS === 'android') {
-      setShowDatePicker(false);
-    }
+    setShowDatePicker(false);
     if (date) {
       setSelectedDate(date);
       // Format as DD MMM YYYY
@@ -157,6 +155,7 @@ export const TeacherAssignmentsScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top', 'left', 'right']}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={theme.background} />
       <View style={[styles.header, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
           <Ionicons name="arrow-back" size={scale(22)} color={theme.text} />
@@ -384,6 +383,7 @@ export const TeacherAssignmentsScreen: React.FC = () => {
                   placeholder="Optional description or instructions..."
                   placeholderTextColor={theme.textSecondary}
                   multiline
+                  scrollEnabled={false}
                   numberOfLines={4}
                   textAlignVertical="top"
                   value={formData.description}
@@ -391,9 +391,7 @@ export const TeacherAssignmentsScreen: React.FC = () => {
                 />
 
                 <View style={{ height: scale(20) }} />
-              </ScrollView>
 
-              <View style={[styles.modalFooter, { backgroundColor: theme.card }]}>
                 <TouchableOpacity
                   style={[styles.saveBtn, { backgroundColor: theme.primary, opacity: saving ? 0.7 : 1, marginTop: 0 }]}
                   onPress={handleSave}
@@ -401,7 +399,9 @@ export const TeacherAssignmentsScreen: React.FC = () => {
                 >
                   {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>Save Assignment</Text>}
                 </TouchableOpacity>
-              </View>
+
+                <View style={{ height: scale(20) }} />
+              </ScrollView>
             </View>
           </KeyboardAvoidingView>
         </SafeAreaView>

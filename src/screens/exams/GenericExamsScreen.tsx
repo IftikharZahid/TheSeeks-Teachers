@@ -1533,7 +1533,7 @@ export const GenericExamsScreen: React.FC = () => {
               />
             )}
           />
-          <View style={{ paddingHorizontal: scale(10), paddingTop: scale(8), paddingBottom: Platform.OS === 'android' ? 28 : 12, borderTopWidth: 1, borderTopColor: theme.border }}>
+          <View style={{ paddingHorizontal: scale(10), paddingTop: scale(8), paddingBottom: 28, borderTopWidth: 1, borderTopColor: theme.border }}>
             <Text style={{ fontSize: scale(10), color: theme.textSecondary, textAlign: 'center', letterSpacing: 0.2 }}>
               Showing {Math.min(visibleCount, studentProgressList.length)} of {studentProgressList.length} students
             </Text>
@@ -1945,7 +1945,7 @@ export const GenericExamsScreen: React.FC = () => {
                 <DateTimePicker
                   value={date}
                   mode="date"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  display="default"
                   onChange={onDateChange}
                   maximumDate={new Date(2030, 11, 31)}
                   minimumDate={new Date(2020, 0, 1)}
@@ -2635,7 +2635,7 @@ const styles = StyleSheet.create({
   
   // ─── Full Screen Form ─────────────────────────────────────────────────────
   fullScreenModal: { flex: 1 },
-  fsFormHeader: { paddingTop: Platform.OS === 'ios' ? 48 : (StatusBar.currentHeight || 30) + 6, paddingBottom: scale(12), paddingHorizontal: scale(12), flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  fsFormHeader: { paddingTop: (StatusBar.currentHeight || 30) + 6, paddingBottom: scale(12), paddingHorizontal: scale(12), flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   fsFormHeaderBtn: { width: scale(32), height: scale(32), borderRadius: scale(16), backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
   fsFormHeaderCenter: { flex: 1, alignItems: 'center' },
   fsFormHeaderTitle: { fontSize: scale(16), fontWeight: '800', color: '#fff', letterSpacing: 0.1 },

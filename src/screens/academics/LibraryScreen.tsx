@@ -372,7 +372,7 @@ export const LibraryScreen: React.FC = () => {
       </View>
 
       {/* ── List ── */}
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={undefined}>
         <FlatList
           data={filtered}
           keyExtractor={item => item.id}

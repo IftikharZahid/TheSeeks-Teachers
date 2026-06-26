@@ -35,7 +35,7 @@ files.forEach(file => {
     `<Modal visible={modalVisible} animationType="slide" transparent statusBarTranslucent>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior="height">
           <View style={{ flex: 1, backgroundColor: theme.background }}>
-            <View style={{ flex: 1, paddingTop: Platform.OS === 'ios' ? 48 : (StatusBar.currentHeight || 30) }}>`
+            <View style={{ flex: 1, paddingTop: (StatusBar.currentHeight || 30) }}>`
   );
 
   // Close the KeyboardAvoidingView for EDIT / ADD MODAL

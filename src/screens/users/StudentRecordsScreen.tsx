@@ -1597,7 +1597,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   formHeader: {
-    paddingTop: Platform.OS === 'ios' ? 54 : (StatusBar.currentHeight || 30) + 10,
+    paddingTop: (StatusBar.currentHeight || 30) + 10,
     paddingBottom: scale(18),
     paddingHorizontal: scale(16),
     flexDirection: 'row',
