@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, RefreshControl
+  ActivityIndicator, RefreshControl, StatusBar
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -28,6 +28,24 @@ const formatTime12Hour = (time24?: string): string => {
   const ampm = h >= 12 ? 'PM' : 'AM';
   h = h % 12 || 12;
   return `${h.toString().padStart(2, '0')}:${mStr || '00'} ${ampm}`;
+};
+
+const parseTime = (timeStr?: string) => {
+  if (!timeStr) return 0;
+  let match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  if (match) {
+    let hours = parseInt(match[1], 10);
+    const minutes = parseInt(match[2], 10);
+    const modifier = match[3].toUpperCase();
+    if (modifier === 'PM' && hours < 12) hours += 12;
+    if (modifier === 'AM' && hours === 12) hours = 0;
+    return hours * 60 + minutes;
+  }
+  match = timeStr.trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (match) {
+    return parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
+  }
+  return 0;
 };
 
 /**
@@ -77,6 +95,19 @@ export const AdminTimetableScreen: React.FC = () => {
 
   const [selectedDay, setSelectedDay] = useState<string>(todayName() === 'Sunday' ? 'Monday' : todayName());
   const [refreshing, setRefreshing] = useState(false);
+
+  const [currentTimeMinutes, setCurrentTimeMinutes] = useState(() => {
+    const now = new Date();
+    return now.getHours() * 60 + now.getMinutes();
+  });
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = new Date();
+      setCurrentTimeMinutes(now.getHours() * 60 + now.getMinutes());
+    }, 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Subscribe to timetable via Redux (real-time snapshot)
   useEffect(() => {
@@ -137,6 +168,7 @@ export const AdminTimetableScreen: React.FC = () => {
   // ──────────────────────────────────────────────
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top', 'left', 'right']}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={theme.background} />
       {/* ── Header ── */}
       <View style={[styles.header, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
@@ -223,20 +255,27 @@ export const AdminTimetableScreen: React.FC = () => {
 
           <View style={styles.listContainer}>
             {filteredEntries.map((e: any, index: number) => {
-              const isActive = false; // We can add current time check if needed, but for now just simple dots
+              const start = parseTime(e.startTime || (e.time ? e.time.split('-')[0] : ''));
+              const end = parseTime(e.endTime || (e.time ? e.time.split('-')[1] : '')) || (start + 60);
+              const isActive = selectedDay === today && currentTimeMinutes >= start && currentTimeMinutes <= end;
+              
               return (
                 <View key={e.id || index} style={{ flexDirection: 'row', alignItems: 'stretch' }}>
                   {/* Timeline Left */}
                   <View style={{ width: scale(24), alignItems: 'center', marginRight: scale(4) }}>
-                    <View style={[{ width: scale(10), height: scale(10), borderRadius: scale(5), marginTop: scale(20), zIndex: 2, backgroundColor: isDark ? '#3b82f6' : '#60a5fa', shadowColor: '#3b82f6', shadowOffset: {width: 0, height: 0}, shadowOpacity: 0.5, shadowRadius: 3, elevation: 2 }]} />
+                    <View style={[{ width: scale(10), height: scale(10), borderRadius: scale(5), marginTop: scale(20), zIndex: 2, backgroundColor: isActive ? theme.primary : (isDark ? '#3b82f6' : '#60a5fa'), shadowColor: isActive ? theme.primary : '#3b82f6', shadowOffset: {width: 0, height: 0}, shadowOpacity: 0.5, shadowRadius: isActive ? 6 : 3, elevation: isActive ? 4 : 2 }]} />
                     {index < filteredEntries.length - 1 && (
-                      <View style={{ position: 'absolute', top: scale(30), bottom: -scale(14), width: 2, backgroundColor: isDark ? 'rgba(59,130,246,0.3)' : 'rgba(59,130,246,0.3)' }} />
+                      <View style={{ position: 'absolute', top: scale(30), bottom: -scale(8), width: 2, backgroundColor: isDark ? 'rgba(59,130,246,0.3)' : 'rgba(59,130,246,0.3)' }} />
                     )}
                   </View>
 
                   {/* Card Main */}
-                  <View style={{ flex: 1, marginBottom: scale(12) }}>
-                    <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                  <View style={{ flex: 1 }}>
+                    <View style={[
+                      styles.card, 
+                      { backgroundColor: theme.card, borderColor: theme.border },
+                      isActive && { borderTopWidth: 4, borderTopColor: theme.primary }
+                    ]}>
                       {/* Period Badge */}
                       <View style={[styles.periodBadge, { backgroundColor: isDark ? 'rgba(59,130,246,0.15)' : '#eff6ff', borderColor: theme.primary, borderWidth: 1 }]}>
                         <Text style={[styles.periodLabel, { color: theme.primary }]}>Lec</Text>

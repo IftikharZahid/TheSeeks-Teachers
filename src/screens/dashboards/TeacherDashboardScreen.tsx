@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator, RefreshControl, Linking, Dimensions, Modal, TouchableWithoutFeedback, Animated, StatusBar } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, FontAwesome } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import { useTheme } from '../../context/ThemeContext';
 import { signOut } from 'firebase/auth';
@@ -770,6 +770,9 @@ export const TeacherDashboardScreen: React.FC = () => {
               onPress={() => handleNavigate('AdminTimetable')}
               style={[styles.overviewCard, { backgroundColor: isDark ? theme.card : '#faf5ff', borderColor: isDark ? theme.border : '#f3e8ff' }]}
             >
+              <View style={[styles.cardPin, { backgroundColor: '#a855f7' }]}>
+                <View style={styles.pinHighlight} />
+              </View>
               <View style={[styles.overviewIconWrap, { backgroundColor: isDark ? 'rgba(168,85,247,0.1)' : '#f3e8ff' }]}>
                 <Ionicons name="calendar" size={18} color="#a855f7" />
               </View>
@@ -787,6 +790,9 @@ export const TeacherDashboardScreen: React.FC = () => {
               onPress={() => handleNavigate('AttendanceClassesListScreen')}
               style={[styles.overviewCard, { backgroundColor: isDark ? theme.card : '#f0fdf4', borderColor: isDark ? theme.border : '#dcfce7' }]}
             >
+              <View style={[styles.cardPin, { backgroundColor: '#22c55e' }]}>
+                <View style={styles.pinHighlight} />
+              </View>
               <View style={[styles.overviewIconWrap, { backgroundColor: isDark ? 'rgba(34,197,94,0.1)' : '#dcfce7' }]}>
                 <Ionicons name="people" size={18} color="#22c55e" />
               </View>
@@ -804,6 +810,9 @@ export const TeacherDashboardScreen: React.FC = () => {
               onPress={() => handleNavigate('LibraryScreen')}
               style={[styles.overviewCard, { backgroundColor: isDark ? theme.card : '#eff6ff', borderColor: isDark ? theme.border : '#dbeafe' }]}
             >
+              <View style={[styles.cardPin, { backgroundColor: '#3b82f6' }]}>
+                <View style={styles.pinHighlight} />
+              </View>
               <View style={[styles.overviewIconWrap, { backgroundColor: isDark ? 'rgba(59,130,246,0.1)' : '#dbeafe' }]}>
                 <Ionicons name="library" size={18} color="#3b82f6" />
               </View>
@@ -818,6 +827,9 @@ export const TeacherDashboardScreen: React.FC = () => {
               onPress={() => handleNavigate('TeacherAssignmentsScreen')}
               style={[styles.overviewCard, { backgroundColor: isDark ? theme.card : '#fff7ed', borderColor: isDark ? theme.border : '#ffedd5' }]}
             >
+              <View style={[styles.cardPin, { backgroundColor: '#f97316' }]}>
+                <View style={styles.pinHighlight} />
+              </View>
               <View style={[styles.overviewIconWrap, { backgroundColor: isDark ? 'rgba(249,115,22,0.1)' : '#ffedd5' }]}>
                 <Ionicons name="clipboard" size={18} color="#f97316" />
               </View>
@@ -825,7 +837,7 @@ export const TeacherDashboardScreen: React.FC = () => {
                 ? <ActivityIndicator size="small" color="#f97316" style={{ marginVertical: scale(4) }} />
                 : <Text style={[styles.overviewValue, { color: theme.text }]}>{assignments.length}</Text>
               }
-              <Text style={[styles.overviewLabel, { color: theme.textSecondary }]}>Total Assignments</Text>
+              <Text style={[styles.overviewLabel, { color: theme.textSecondary }]}>Assignments</Text>
               <Text style={[styles.overviewStatus, { color: '#f97316' }]}>Active</Text>
             </TouchableOpacity>
           </ScrollView>
@@ -1033,7 +1045,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: scale(240),
+    height: scale(260),
     overflow: 'hidden',
     backgroundColor: '#030b2e',
   },
@@ -1175,7 +1187,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: scale(16),
     paddingTop: scale(10),
-    paddingBottom: scale(20),
+    paddingBottom: scale(8),
     zIndex: 200,
   },
   headerCenter: {
@@ -1196,7 +1208,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   headerSubtitle: {
-    color: '#cbd5e1',
+    color: '#fbbf24',
     fontSize: scale(11),
     fontWeight: '500',
     marginTop: scale(2),
@@ -1386,6 +1398,7 @@ const styles = StyleSheet.create({
   // Overview Scroll
   overviewScroll: {
     paddingHorizontal: scale(16),
+    paddingTop: scale(12),
     gap: scale(10),
   },
   overviewCard: {
@@ -1418,6 +1431,31 @@ const styles = StyleSheet.create({
   overviewStatus: {
     fontSize: scale(10),
     fontWeight: '700',
+  },
+  cardPin: {
+    position: 'absolute',
+    top: -scale(7),
+    alignSelf: 'center',
+    width: scale(14),
+    height: scale(14),
+    borderRadius: scale(7),
+    zIndex: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+    elevation: 4,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(0,0,0,0.1)',
+  },
+  pinHighlight: {
+    position: 'absolute',
+    top: scale(2),
+    left: scale(2),
+    width: scale(4),
+    height: scale(4),
+    borderRadius: scale(2),
+    backgroundColor: 'rgba(255,255,255,0.6)',
   },
 
   // Quick Access
