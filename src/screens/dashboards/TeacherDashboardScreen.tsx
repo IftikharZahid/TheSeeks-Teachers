@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator, RefreshControl, Linking, Dimensions, Modal, TouchableWithoutFeedback, Animated, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator, RefreshControl, Linking, Dimensions, Modal, TouchableWithoutFeedback, Animated, Easing, StatusBar } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons, FontAwesome } from '@expo/vector-icons';
@@ -10,6 +10,7 @@ import { auth } from '../../api/firebaseConfig';
 import { useAppSelector, useAppDispatch } from '../../store/hooks';
 import { scale } from '../../utils/responsive';
 import type { RootState } from '../../store/store';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import {
   initExamsListener,
@@ -58,6 +59,7 @@ const quickActions = [
   { key: 'assignments', label: 'Assignments', icon: 'clipboard' as const, color: '#ec4899', bg: '#fdf2f8', screen: 'TeacherAssignmentsScreen', root: true },
   { key: 'messages', label: 'Messages', icon: 'mail' as const, color: '#0ea5e9', bg: '#f0f9ff', screen: 'MessagesScreen', root: true },
   { key: 'suggestions', label: 'Suggestions', icon: 'bulb' as const, color: '#f59e0b', bg: '#fffbeb', screen: 'TeacherSuggestionsScreen', root: true },
+  { key: 'videoLectures', label: 'Video Lectures', icon: 'videocam' as const, color: '#ff4d6d', bg: '#fff0f2', screen: 'VideoGalleriesScreen', root: true },
 ];
 
 const selectTeacherTimetable = (state: RootState) => state.admin.timetable;
@@ -71,46 +73,90 @@ const BlinkingNotification: React.FC<{
   theme: any;
 }> = ({ subject, clsName, sectionInfo, displayTime, isDark, theme }) => {
   const opacity = useRef(new Animated.Value(0.1)).current;
+  const spinAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    // Pulse animation for the active dot
     Animated.loop(
       Animated.sequence([
         Animated.timing(opacity, { toValue: 1, duration: 400, useNativeDriver: true }),
         Animated.timing(opacity, { toValue: 0.1, duration: 400, useNativeDriver: true })
       ])
     ).start();
-  }, [opacity]);
+
+    // Continuous spin animation for the spark line
+    Animated.loop(
+      Animated.timing(spinAnim, {
+        toValue: 1,
+        duration: 2500,
+        easing: Easing.linear,
+        useNativeDriver: true
+      })
+    ).start();
+  }, [opacity, spinAnim]);
+
+  const spin = spinAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg']
+  });
 
   return (
     <View style={{ marginHorizontal: scale(16), marginTop: scale(10) }}>
       <View style={{
-        backgroundColor: isDark ? 'rgba(59,130,246,0.1)' : '#f0fdfa',
-        borderRadius: scale(8),
-        paddingVertical: scale(6),
-        paddingHorizontal: scale(10),
-        borderWidth: 1,
-        borderColor: isDark ? 'rgba(59,130,246,0.2)' : '#ccfbf1',
-        flexDirection: 'row',
-        alignItems: 'center',
+        borderRadius: scale(50),
+        overflow: 'hidden',
+        padding: 2, // Width of the spark line
+        position: 'relative'
       }}>
-        <Animated.View style={{ opacity, flexDirection: 'row', alignItems: 'center', marginRight: scale(6) }}>
-          <View style={{ width: scale(6), height: scale(6), borderRadius: scale(3), backgroundColor: '#ef4444', marginRight: scale(4) }} />
-          <Text style={{ fontSize: scale(9), color: isDark ? '#ef4444' : '#ef4444', fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.5 }}>Active</Text>
+        {/* Spinning Gradient Background (Spark Line) */}
+        <Animated.View
+          style={{
+            position: 'absolute',
+            top: '-50%',
+            left: '-50%',
+            right: '-50%',
+            bottom: '-50%',
+            transform: [{ rotate: spin }],
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          <LinearGradient
+            colors={['#ef4444', 'transparent', 'transparent']}
+            style={{ width: '100%', height: '100%' }}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+          />
         </Animated.View>
-        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-          <Text style={{ fontSize: scale(11), color: theme.text, fontWeight: '700', flex: 1 }} numberOfLines={1}>
-            {subject} <Text style={{ fontWeight: '500', color: theme.textTertiary, fontSize: scale(10) }}>| {clsName}</Text>
-          </Text>
-        </View>
 
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(6) }}>
-          {!!sectionInfo && (
-            <View style={{ backgroundColor: isDark ? 'rgba(2,132,199,0.3)' : '#bae6fd', paddingHorizontal: scale(4), paddingVertical: scale(2), borderRadius: scale(4) }}>
-              <Text style={{ fontSize: scale(8), color: isDark ? '#bae6fd' : '#0369a1', fontWeight: '700' }}>{sectionInfo}</Text>
+        {/* Inner Content Component */}
+        <View style={{
+          backgroundColor: isDark ? '#1e293b' : '#f0fdfa',
+          borderRadius: scale(50),
+          paddingVertical: scale(8),
+          paddingHorizontal: scale(14),
+          flexDirection: 'row',
+          alignItems: 'center',
+        }}>
+          <Animated.View style={{ opacity, flexDirection: 'row', alignItems: 'center', marginRight: scale(6) }}>
+            <View style={{ width: scale(6), height: scale(6), borderRadius: scale(3), backgroundColor: '#ef4444', marginRight: scale(4) }} />
+            <Text style={{ fontSize: scale(9), color: isDark ? '#ef4444' : '#ef4444', fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.5 }}>Active</Text>
+          </Animated.View>
+          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={{ fontSize: scale(12), color: theme.text, fontWeight: '700', flex: 1 }} numberOfLines={1}>
+              {subject} <Text style={{ fontWeight: '500', color: theme.textTertiary, fontSize: scale(10) }}>| {clsName}</Text>
+            </Text>
+          </View>
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(6) }}>
+            {!!sectionInfo && (
+              <View style={{ backgroundColor: isDark ? 'rgba(2,132,199,0.3)' : '#bae6fd', paddingHorizontal: scale(6), paddingVertical: scale(2), borderRadius: scale(50) }}>
+                <Text style={{ fontSize: scale(9), color: isDark ? '#bae6fd' : '#0369a1', fontWeight: '700' }}>{sectionInfo}</Text>
+              </View>
+            )}
+            <View style={{ backgroundColor: isDark ? 'rgba(14,165,233,0.15)' : '#e0f2fe', paddingHorizontal: scale(8), paddingVertical: scale(2), borderRadius: scale(50) }}>
+              <Text style={{ fontSize: scale(10), color: isDark ? '#7dd3fc' : '#0284c7', fontWeight: '800' }}>{displayTime}</Text>
             </View>
-          )}
-          <View style={{ backgroundColor: isDark ? 'rgba(14,165,233,0.15)' : '#e0f2fe', paddingHorizontal: scale(6), paddingVertical: scale(2), borderRadius: scale(4) }}>
-            <Text style={{ fontSize: scale(9), color: isDark ? '#7dd3fc' : '#0284c7', fontWeight: '800' }}>{displayTime}</Text>
           </View>
         </View>
       </View>
@@ -260,6 +306,10 @@ export const TeacherDashboardScreen: React.FC = () => {
   const attendanceDb = useAppSelector(s => s.attendance.adminDb);
   const attendanceLoading = useAppSelector(s => s.attendance.adminLoading);
 
+  const reduxGalleries = useAppSelector((s: any) => s.videos?.galleries) || [];
+  const uniqueVideoClasses = new Set(reduxGalleries.map((g: any) => g.targetClass).filter(Boolean)).size;
+  const totalVideos = reduxGalleries.reduce((sum: number, g: any) => sum + (g.videos?.length || 0), 0);
+
   // Compute today's present count across all classes the teacher teaches
   const todaysPresentCount = React.useMemo(() => {
     const teacherNameLower = (profileData?.fullname || user?.displayName || '').trim().toLowerCase();
@@ -353,6 +403,7 @@ export const TeacherDashboardScreen: React.FC = () => {
     assignments: { value: `${assignments.length} Total`, loading: assignmentsLoading },
     diary: { value: 'Manage', loading: false },
     suggestions: { value: 'Submit', loading: false },
+    videoLectures: { value: `${uniqueVideoClasses} Classes`, loading: false },
   };
 
   const displayName = profileData?.fullname || user?.displayName || 'Teacher';
@@ -377,7 +428,7 @@ export const TeacherDashboardScreen: React.FC = () => {
   const academicYearText = `Academic Year ${startYear}-${(startYear + 1).toString().slice(-2)}`;
 
   return (
-    <View style={[styles.container, { backgroundColor: isDark ? theme.background : '#f8fafc' }]}>
+    <View style={[styles.container, { backgroundColor: isDark ? theme.background : '#F3F4F6', paddingTop: StatusBar.currentHeight || 0 }]}>
       <StatusBar backgroundColor="#1e3a8a" barStyle="light-content" translucent={false} />
       {/* Top Banner: Curved blue background with watermark logo */}
       <View style={{
@@ -401,7 +452,7 @@ export const TeacherDashboardScreen: React.FC = () => {
         />
       </View>
 
-      <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right']}>
+      <View style={{ flex: 1 }}>
         {/* Header Content */}
         <View style={styles.header}>
           <TouchableOpacity style={styles.headerIconBtnTransparent} onPress={() => setShowSideMenu(true)}>
@@ -455,12 +506,12 @@ export const TeacherDashboardScreen: React.FC = () => {
                 shadowOpacity: 0.18, shadowRadius: 16, elevation: 18,
                 overflow: 'hidden',
               }}>
-                <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
+                <View style={{ flex: 1 }}>
 
                   {/* ── Avatar / Profile header ── */}
                   <View style={{
                     backgroundColor: isDark ? '#0f172a' : '#1e3a8a',
-                    paddingHorizontal: scale(16), paddingTop: scale(20), paddingBottom: scale(16),
+                    paddingHorizontal: scale(16), paddingTop: Math.max(insets.top, scale(20)) + scale(10), paddingBottom: scale(16),
                   }}>
                     {/* Institute name row */}
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: scale(14) }}>
@@ -475,7 +526,11 @@ export const TeacherDashboardScreen: React.FC = () => {
                     </View>
 
                     {/* Teacher info row */}
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <TouchableOpacity 
+                      style={{ flexDirection: 'row', alignItems: 'center' }} 
+                      activeOpacity={0.8} 
+                      onPress={() => { setShowSideMenu(false); handleNavigate('ProfileScreen'); }}
+                    >
                       <Image
                         source={displayImage ? { uri: displayImage } : require('../../../assets/icon.png')}
                         style={{ width: scale(42), height: scale(42), borderRadius: scale(21), marginRight: scale(10), borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)' }}
@@ -491,7 +546,7 @@ export const TeacherDashboardScreen: React.FC = () => {
                           <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: scale(9), marginTop: scale(2) }} numberOfLines={1}>{profileData.class}</Text>
                         )}
                       </View>
-                    </View>
+                    </TouchableOpacity>
                   </View>
 
                   {/* ── Navigation sections ── */}
@@ -602,7 +657,7 @@ export const TeacherDashboardScreen: React.FC = () => {
                     </TouchableOpacity>
                   </View>
 
-                </SafeAreaView>
+                </View>
               </View>
             </View>
           </Modal>
@@ -617,7 +672,11 @@ export const TeacherDashboardScreen: React.FC = () => {
           {/* Profile Card */}
           <View style={[styles.profileCard, { backgroundColor: theme.card }]}>
             <View style={styles.profileLeft}>
-              <View style={styles.avatarWrap}>
+              <TouchableOpacity 
+                style={styles.avatarWrap}
+                activeOpacity={0.8}
+                onPress={() => handleNavigate('ProfileScreen')}
+              >
                 <Image
                   source={
                     displayImage
@@ -628,7 +687,7 @@ export const TeacherDashboardScreen: React.FC = () => {
                   style={styles.avatar}
                 />
                 <View style={styles.onlineDot} />
-              </View>
+              </TouchableOpacity>
               <Text style={[styles.profileName, { color: theme.text }]}>{displayName}</Text>
               <View style={styles.roleBadge}>
                 <Text style={styles.roleBadgeText}>{displayRole}</Text>
@@ -848,50 +907,89 @@ export const TeacherDashboardScreen: React.FC = () => {
           </View>
 
           <View style={{ position: 'relative', marginVertical: scale(10) }}>
-            <View style={{ position: 'absolute', left: '50%', top: -scale(10), bottom: -scale(10), width: 2, backgroundColor: isDark ? 'rgba(59,130,246,0.3)' : 'rgba(59,130,246,0.3)', transform: [{ translateX: -1 }] }} />
-            <View style={{ position: 'absolute', left: '50%', top: -scale(10), width: scale(8), height: scale(8), borderRadius: scale(4), backgroundColor: '#f97316', transform: [{ translateX: -4 }] }} />
-            <View style={{ position: 'absolute', left: '50%', bottom: -scale(10), width: scale(8), height: scale(8), borderRadius: scale(4), backgroundColor: '#f97316', transform: [{ translateX: -4 }] }} />
+            <View style={{ position: 'absolute', left: '50%', top: -scale(10), bottom: quickActions.length % 2 === 0 ? -scale(10) : scale(55), width: 2, backgroundColor: isDark ? 'rgba(59,130,246,0.3)' : 'rgba(59,130,246,0.3)', transform: [{ translateX: -1 }], zIndex: 0 }} />
+            <View style={{ position: 'absolute', left: '50%', top: -scale(10), width: scale(8), height: scale(8), borderRadius: scale(4), backgroundColor: '#f97316', transform: [{ translateX: -4 }], zIndex: 1 }} />
+            
+            {quickActions.length % 2 === 0 && (
+              <View style={{ position: 'absolute', left: '50%', bottom: -scale(10), width: scale(8), height: scale(8), borderRadius: scale(4), backgroundColor: '#f97316', transform: [{ translateX: -4 }], zIndex: 1 }} />
+            )}
 
-            <View style={styles.quickAccessGrid}>
+            <View style={[styles.quickAccessGrid, { zIndex: 2 }]}>
               {quickActions.map((item, index) => {
-                const stat = statMap[item.key];
+                const stat = statMap[item.key] || { value: 'View', loading: false };
                 const isLeft = index % 2 === 0;
+                const isLastOdd = index === quickActions.length - 1 && quickActions.length % 2 !== 0;
+
                 return (
-                  <View key={item.key} style={[styles.quickAccessItem, { position: 'relative' }]}>
-                    <View style={{
-                      position: 'absolute',
-                      top: '50%',
-                      [isLeft ? 'right' : 'left']: -scale(22),
-                      width: scale(22),
-                      height: 2,
-                      backgroundColor: isDark ? 'rgba(59,130,246,0.3)' : 'rgba(59,130,246,0.3)',
-                      zIndex: -1,
-                    }} />
-                    <View style={{
-                      position: 'absolute',
-                      top: '50%',
-                      marginTop: -scale(4),
-                      [isLeft ? 'right' : 'left']: -scale(6),
-                      width: scale(8),
-                      height: scale(8),
-                      borderRadius: scale(4),
-                      backgroundColor: '#f97316',
-                      zIndex: 2,
-                    }} />
+                  <View key={item.key} style={[styles.quickAccessItem, isLastOdd && { width: '100%', alignItems: 'center' }, { position: 'relative' }]}>
+                    {!isLastOdd && (
+                      <View style={{
+                        position: 'absolute',
+                        top: '50%',
+                        [isLeft ? 'right' : 'left']: -scale(22),
+                        width: scale(22),
+                        height: 2,
+                        backgroundColor: isDark ? 'rgba(59,130,246,0.3)' : 'rgba(59,130,246,0.3)',
+                        zIndex: 1,
+                      }} />
+                    )}
+                    {!isLastOdd && (
+                      <View style={{
+                        position: 'absolute',
+                        top: '50%',
+                        marginTop: -scale(4),
+                        [isLeft ? 'right' : 'left']: -scale(6),
+                        width: scale(8),
+                        height: scale(8),
+                        borderRadius: scale(4),
+                        backgroundColor: '#f97316',
+                        zIndex: 3,
+                      }} />
+                    )}
+                    
+                    {/* If last odd, draw the dot at the top center of this card where the line connects */}
+                    {isLastOdd && (
+                       <View style={{
+                         position: 'absolute',
+                         top: -scale(10),
+                         left: '50%',
+                         marginLeft: -scale(4),
+                         width: scale(8),
+                         height: scale(8),
+                         borderRadius: scale(4),
+                         backgroundColor: '#f97316',
+                         zIndex: 3,
+                       }} />
+                    )}
 
                     <TouchableOpacity
-                      style={{ flex: 1, backgroundColor: theme.card, borderColor: theme.border, borderWidth: 1, borderRadius: scale(10), padding: scale(8), flexDirection: 'row', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: scale(1) }, shadowOpacity: 0.02, shadowRadius: 3, elevation: 1 }}
+                      style={{ width: isLastOdd ? '46%' : '100%', backgroundColor: theme.card, borderColor: theme.border, borderWidth: 1, borderRadius: scale(10), padding: scale(8), flexDirection: 'row', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: scale(1) }, shadowOpacity: 0.02, shadowRadius: 3, elevation: 1, zIndex: 2 }}
                       activeOpacity={0.7}
                       onPress={() => handleNavigate(item.screen, item.root)}
                     >
                       <View style={[styles.quickIconBox, { backgroundColor: isDark ? item.color + '20' : item.bg }]}>
-                        <Ionicons name={item.icon} size={18} color={item.color} />
+                        <Ionicons name={item.icon as any} size={18} color={item.color} />
                       </View>
                       <View style={{ flex: 1 }}>
                         <Text style={[styles.quickLabel, { color: theme.text }]} numberOfLines={1}>{item.label}</Text>
                         <Text style={[styles.quickStat, { color: item.color }]}>{stat.value}</Text>
                       </View>
                       <Ionicons name="chevron-forward" size={16} color={theme.textTertiary} />
+
+                      {item.key === 'videoLectures' && totalVideos > 0 && (
+                        <View style={{
+                          position: 'absolute',
+                          top: -1,
+                          right: -1,
+                          backgroundColor: item.color,
+                          borderBottomLeftRadius: scale(10),
+                          borderTopRightRadius: scale(10),
+                          paddingHorizontal: scale(6),
+                          paddingVertical: scale(2),
+                        }}>
+                          <Text style={{ fontSize: scale(8), fontWeight: 'bold', color: '#fff' }}>{totalVideos}</Text>
+                        </View>
+                      )}
                     </TouchableOpacity>
                   </View>
                 );
@@ -1033,13 +1131,13 @@ export const TeacherDashboardScreen: React.FC = () => {
           </View>
 
         </ScrollView>
-      </SafeAreaView>
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, paddingTop: StatusBar.currentHeight || 0 },
   headerBackground: {
     position: 'absolute',
     top: 0,

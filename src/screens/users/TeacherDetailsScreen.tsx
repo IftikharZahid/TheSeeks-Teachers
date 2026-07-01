@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Dimensions, Linking, Alert } from 'react-native';
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Dimensions, Linking, Alert, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
@@ -56,19 +56,30 @@ export const StaffInfoScreen: React.FC = () => {
   const headerBg = isDark ? theme.backgroundSecondary : theme.primary; // Dark mode: nice dark gray, Light mode: primary color
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: StatusBar.currentHeight || 0 }]}>
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: StatusBar.currentHeight || 0, backgroundColor: theme.primary, zIndex: 999 }} />
+      <StatusBar barStyle="light-content" backgroundColor={isDark ? theme.card : theme.primary} translucent={false} />
       {/* Layer 1: Purple Background (BACK) */}
       <View style={[styles.headerBackground, { backgroundColor: headerBg }]} />
 
       {/* Layer 3: Floating Buttons (FRONT - always on top) */}
-      <SafeAreaView edges={['top']} style={styles.floatingButtonsContainer}>
+      <View style={styles.floatingButtonsContainer}>
         <View style={styles.headerTopRow}>
           <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={[styles.iconButton, { backgroundColor: 'rgba(255,255,255,0.2)' }]}
-          >
-            <Ionicons name="arrow-back" size={scale(24)} color="#ffffff" />
-          </TouchableOpacity>
+        style={{ 
+          width: scale(38), 
+          height: scale(38), 
+          borderRadius: scale(12), 
+          backgroundColor: 'rgba(255, 255, 255, 0.15)', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          marginRight: scale(12) 
+        }} 
+        activeOpacity={0.7}
+        onPress={() => navigation.goBack()}
+      >
+        <Ionicons name="arrow-back" size={scale(22)} color="#ffffff" />
+      </TouchableOpacity>
           <Text style={styles.headerTitle}>Teacher Profile</Text>
           <TouchableOpacity
             onPress={handleToggleLike}
@@ -77,7 +88,7 @@ export const StaffInfoScreen: React.FC = () => {
             <Ionicons name={isFavorite ? "heart" : "heart-outline"} size={scale(22)} color={isFavorite ? "#ff4081" : "#ffffff"} />
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -208,6 +219,7 @@ export const StaffInfoScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingTop: StatusBar.currentHeight || 0,
   },
   headerBackground: {
     height: scale(130),

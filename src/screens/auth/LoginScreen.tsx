@@ -1,20 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  Alert,
-  Platform,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Image,
-  Dimensions,
-  ActivityIndicator,
-  Linking,
-  Keyboard,
-} from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Alert, Platform, ScrollView, StyleSheet, Image, Dimensions, ActivityIndicator, Linking, Keyboard, StatusBar } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RootStackParamList } from '../../navigation/AppNavigator';
@@ -22,7 +7,6 @@ import { signInWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'fir
 import { auth, db } from '../../api/firebaseConfig';
 import { doc, getDoc, collection, query, where, getDocs, or } from 'firebase/firestore';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { scale } from '../../utils/responsive';
 
@@ -238,7 +222,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
         </Svg>
       </View>
 
-      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+      <View style={styles.safeArea}>
           <ScrollView
             ref={scrollViewRef}
             contentContainerStyle={[styles.scrollContent, { paddingBottom: keyboardHeight }]}
@@ -418,7 +402,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
               </View>
             </View>
           </ScrollView>
-      </SafeAreaView>
+      </View>
     </View>
   );
 };
@@ -439,6 +423,7 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     zIndex: 1,
+    paddingTop: StatusBar.currentHeight || 0,
   },
   scrollContent: {
     flexGrow: 1,

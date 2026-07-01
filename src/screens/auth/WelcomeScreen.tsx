@@ -1,18 +1,6 @@
 import React from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Image,
-  Dimensions,
-  ScrollView,
-  Alert,
-  StatusBar,
-  Platform,
-} from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, ScrollView, Alert, Platform, StatusBar } from 'react-native';
 import { Ionicons } from "@expo/vector-icons";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/AppNavigator";
@@ -71,7 +59,7 @@ export const WelcomeScreen: React.FC = () => {
     <View style={styles.mainContainer}>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       
-      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+      <View style={styles.safeArea}>
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
@@ -172,7 +160,7 @@ export const WelcomeScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
         </ScrollView>
-      </SafeAreaView>
+      </View>
     </View>
   );
 };
@@ -193,6 +181,7 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     zIndex: 1,
+    paddingTop: StatusBar.currentHeight || 0,
   },
   scrollContent: {
     flexGrow: 1,

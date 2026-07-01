@@ -154,15 +154,16 @@ export const TeacherAssignmentsScreen: React.FC = () => {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top', 'left', 'right']}>
-      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={theme.background} />
-      <View style={[styles.header, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: StatusBar.currentHeight || 0 }]}>
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: StatusBar.currentHeight || 0, backgroundColor: theme.primary, zIndex: 999 }} />
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent={true} />
+      <View style={[styles.header, { backgroundColor: theme.primary, borderBottomColor: 'transparent' }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
-          <Ionicons name="arrow-back" size={scale(22)} color={theme.text} />
+          <Ionicons name="arrow-back" size={scale(22)} color="#ffffff" />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>My Assignments</Text>
+        <Text style={[styles.headerTitle, { color: '#ffffff' }]}>My Assignments</Text>
         <TouchableOpacity onPress={() => setShowModal(true)} style={styles.headerButton}>
-          <Ionicons name="add-circle" size={scale(24)} color={theme.primary} />
+          <Ionicons name="add-circle" size={scale(24)} color="#ffffff" />
         </TouchableOpacity>
       </View>
 
@@ -188,13 +189,13 @@ export const TeacherAssignmentsScreen: React.FC = () => {
 
       <Modal visible={showModal} transparent={true} animationType="slide" onRequestClose={() => setShowModal(false)} statusBarTranslucent={true}>
         <View style={{ flex: 1, backgroundColor: theme.card }}>
-          <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-            <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding" keyboardVerticalOffset={0}>
+          <SafeAreaView style={{ flex: 1, backgroundColor: theme.primary }} edges={['top']}>
+            <KeyboardAvoidingView style={{ flex: 1, backgroundColor: theme.card }} behavior="padding" keyboardVerticalOffset={0}>
               <View style={[styles.modalContentFullScreen, { backgroundColor: theme.card }]}>
-                <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
-                  <Text style={[styles.modalTitle, { color: theme.text }]}>Add Assignment</Text>
+                <View style={[styles.modalHeader, { backgroundColor: theme.primary, borderBottomColor: 'transparent' }]}>
+                  <Text style={[styles.modalTitle, { color: '#ffffff' }]}>Add Assignment</Text>
                   <TouchableOpacity onPress={() => setShowModal(false)} style={styles.closeBtn}>
-                    <Ionicons name="close" size={scale(24)} color={theme.textSecondary} />
+                    <Ionicons name="close" size={scale(24)} color="#ffffff" />
                   </TouchableOpacity>
                 </View>
 
@@ -399,21 +400,20 @@ export const TeacherAssignmentsScreen: React.FC = () => {
                 >
                   {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>Save Assignment</Text>}
                 </TouchableOpacity>
-
                 <View style={{ height: scale(20) }} />
               </ScrollView>
             </View>
           </KeyboardAvoidingView>
-        </SafeAreaView>
-      </View>
+          </SafeAreaView>
+        </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
+  header: { borderBottomLeftRadius: scale(24), borderBottomRightRadius: scale(24),
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: scale(16),

@@ -1,9 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, RefreshControl, StatusBar
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Animated, StatusBar } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
@@ -74,6 +70,26 @@ export interface TimetableEntry {
   endTime: string;
   gender?: string;
 }
+
+const BlinkingActiveBadge: React.FC<{ isDark: boolean }> = ({ isDark }) => {
+  const opacity = useRef(new Animated.Value(0.1)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, { toValue: 1, duration: 500, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0.1, duration: 500, useNativeDriver: true })
+      ])
+    ).start();
+  }, [opacity]);
+
+  return (
+    <Animated.View style={{ opacity, flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? 'rgba(239,68,68,0.15)' : '#fef2f2', paddingHorizontal: scale(6), paddingVertical: scale(2), borderRadius: scale(4), borderWidth: 1, borderColor: isDark ? 'rgba(239,68,68,0.3)' : '#fecaca', marginLeft: scale(6) }}>
+      <View style={{ width: scale(4), height: scale(4), borderRadius: scale(2), backgroundColor: '#ef4444', marginRight: scale(4) }} />
+      <Text style={{ fontSize: scale(8), color: '#ef4444', fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.5 }}>Active</Text>
+    </Animated.View>
+  );
+};
 
 // ──────────────────────────────────────────────
 // Component
@@ -167,20 +183,33 @@ export const AdminTimetableScreen: React.FC = () => {
   // RENDER
   // ──────────────────────────────────────────────
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top', 'left', 'right']}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={theme.background} />
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: StatusBar.currentHeight || 0 }]}>
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: StatusBar.currentHeight || 0, backgroundColor: theme.primary, zIndex: 999 }} />
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent={true} />
       {/* ── Header ── */}
-      <View style={[styles.header, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={scale(22)} color={theme.text} />
-        </TouchableOpacity>
+      <View style={[styles.header, { backgroundColor: theme.primary, borderBottomColor: 'transparent' }]}>
+        <TouchableOpacity
+        style={{ 
+          width: scale(38), 
+          height: scale(38), 
+          borderRadius: scale(12), 
+          backgroundColor: 'rgba(255, 255, 255, 0.15)', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          marginRight: scale(12) 
+        }} 
+        activeOpacity={0.7}
+        onPress={() => navigation.goBack()}
+      >
+        <Ionicons name="arrow-back" size={scale(22)} color={isDark ? theme.text : '#ffffff'} />
+      </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={[styles.headerTitle, { color: theme.text }]}>My Timetable</Text>
-          <Text style={[styles.headerSub, { color: theme.textSecondary }]}>
+          <Text style={[styles.headerTitle, { color: isDark ? theme.text : '#fff' }]}>My Timetable</Text>
+          <Text style={[styles.headerSub, { color: isDark ? theme.textSecondary : 'rgba(255,255,255,0.8)' }]}>
             {filteredEntries.length} period{filteredEntries.length !== 1 ? 's' : ''} — {selectedDay}
           </Text>
         </View>
-        {loading && <ActivityIndicator size="small" color={theme.primary} />}
+        {loading && <ActivityIndicator size="small" color={isDark ? theme.primary : '#fff'} />}
       </View>
 
       {/* ── Day Tabs ── */}
@@ -261,13 +290,7 @@ export const AdminTimetableScreen: React.FC = () => {
               
               return (
                 <View key={e.id || index} style={{ flexDirection: 'row', alignItems: 'stretch' }}>
-                  {/* Timeline Left */}
-                  <View style={{ width: scale(24), alignItems: 'center', marginRight: scale(4) }}>
-                    <View style={[{ width: scale(10), height: scale(10), borderRadius: scale(5), marginTop: scale(20), zIndex: 2, backgroundColor: isActive ? theme.primary : (isDark ? '#3b82f6' : '#60a5fa'), shadowColor: isActive ? theme.primary : '#3b82f6', shadowOffset: {width: 0, height: 0}, shadowOpacity: 0.5, shadowRadius: isActive ? 6 : 3, elevation: isActive ? 4 : 2 }]} />
-                    {index < filteredEntries.length - 1 && (
-                      <View style={{ position: 'absolute', top: scale(30), bottom: -scale(8), width: 2, backgroundColor: isDark ? 'rgba(59,130,246,0.3)' : 'rgba(59,130,246,0.3)' }} />
-                    )}
-                  </View>
+                  {/* Removed Timeline Left for compactness */}
 
                   {/* Card Main */}
                   <View style={{ flex: 1 }}>
@@ -284,9 +307,12 @@ export const AdminTimetableScreen: React.FC = () => {
 
                       {/* Main Info */}
                       <View style={styles.cardMain}>
-                        <Text style={[styles.subjectText, { color: theme.text }]} numberOfLines={1}>
-                          {e.subject}
-                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                          <Text style={[styles.subjectText, { color: theme.text }]} numberOfLines={1}>
+                            {e.subject}
+                          </Text>
+                          {isActive && <BlinkingActiveBadge isDark={isDark} />}
+                        </View>
                         <View style={[styles.row, { marginTop: scale(4) }]}>
                           <View style={{ backgroundColor: isDark ? 'rgba(59,130,246,0.1)' : '#eff6ff', paddingHorizontal: scale(6), paddingVertical: scale(3), borderRadius: scale(6), flexDirection: 'row', alignItems: 'center' }}>
                             <Ionicons name="time" size={scale(10)} color={theme.primary} style={{ marginRight: scale(4) }} />
@@ -324,7 +350,7 @@ export const AdminTimetableScreen: React.FC = () => {
           </View>
         </ScrollView>
       )}
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -332,16 +358,17 @@ export const AdminTimetableScreen: React.FC = () => {
 // Styles
 // ──────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, paddingTop: StatusBar.currentHeight || 0 },
 
   // Header
-  header: {
+  header: { borderBottomLeftRadius: scale(24), borderBottomRightRadius: scale(24),
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: scale(14),
     paddingVertical: scale(12),
     borderBottomWidth: 0.5,
     gap: scale(10),
+    marginTop: -1,
   },
   backBtn: { padding: scale(2) },
   headerTitle: { fontSize: scale(17), fontWeight: '800' },
@@ -398,22 +425,22 @@ const styles = StyleSheet.create({
   emptySubtitle: { fontSize: scale(13), textAlign: 'center' },
 
   // List
-  listContainer: { gap: scale(8) },
+  listContainer: { gap: scale(6) },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: scale(12),
-    borderRadius: scale(12),
+    padding: scale(10),
+    borderRadius: scale(10),
     borderWidth: 0.5,
     gap: scale(10),
   },
   periodBadge: {
-    width: scale(38), height: scale(38),
-    borderRadius: scale(10),
+    width: scale(34), height: scale(34),
+    borderRadius: scale(8),
     alignItems: 'center', justifyContent: 'center',
   },
-  periodNum: { fontSize: scale(14), fontWeight: '800', lineHeight: scale(16) },
-  periodLabel: { fontSize: scale(8), fontWeight: '700' },
+  periodNum: { fontSize: scale(13), fontWeight: '800', lineHeight: scale(14) },
+  periodLabel: { fontSize: scale(7), fontWeight: '700', marginBottom: -scale(2) },
   separator: { width: 1, height: scale(40), borderRadius: 1 },
   cardMain: { flex: 1 },
   subjectText: { fontSize: scale(13), fontWeight: '700' },

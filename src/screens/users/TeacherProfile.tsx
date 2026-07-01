@@ -1,8 +1,5 @@
 import React, { useState } from 'react';
-import {
-  View, Text, StyleSheet, ScrollView, Image,
-  TouchableOpacity, Platform, StatusBar
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Platform, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -72,7 +69,7 @@ export const StudentProfile: React.FC = () => {
   const heroPaddingTop = statusBarH + scale(12);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: StatusBar.currentHeight || 0 }]}>
       {/* ── HERO ──────────────────────────────────────────── */}
       <LinearGradient
         colors={[theme.primaryDark, theme.primary]}
@@ -82,12 +79,20 @@ export const StudentProfile: React.FC = () => {
       >
         {/* Back button */}
         <TouchableOpacity
-          style={[styles.backBtn, { top: heroPaddingTop + scale(4) }]}
-          onPress={() => navigation.goBack()}
-          hitSlop={{ top: scale(10), bottom: scale(10), left: scale(10), right: scale(10) }}
-        >
-          <Ionicons name="arrow-back" size={scale(19)} color="#fff" />
-        </TouchableOpacity>
+        style={{ 
+          width: scale(38), 
+          height: scale(38), 
+          borderRadius: scale(12), 
+          backgroundColor: 'rgba(255, 255, 255, 0.15)', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          marginRight: scale(12) 
+        }} 
+        activeOpacity={0.7}
+        onPress={() => navigation.goBack()}
+      >
+        <Ionicons name="arrow-back" size={scale(22)} color="#ffffff" />
+      </TouchableOpacity>
 
         {/* Avatar */}
         <View style={styles.avatarWrap}>
@@ -188,7 +193,7 @@ export const StudentProfile: React.FC = () => {
 
         <View style={{ height: scale(32) }} />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 

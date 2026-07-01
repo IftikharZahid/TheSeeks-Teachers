@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Dimensions } from "react-native";
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Dimensions, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -169,21 +169,32 @@ export const TeachersScreen: React.FC = () => {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top', 'left', 'right']}>
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: StatusBar.currentHeight || 0 }]}>
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: StatusBar.currentHeight || 0, backgroundColor: theme.primary, zIndex: 999 }} />
+      <StatusBar barStyle="light-content" backgroundColor={isDark ? theme.card : theme.primary} translucent={false} />
       {/* Header */}
-      <View style={[styles.header, { borderBottomColor: theme.border, borderBottomWidth: 1 }]}>
+      <View style={[styles.header, { backgroundColor: theme.primary, borderBottomColor: 'transparent' }]}>
         <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.navigate('TeacherDashboardScreen')}
-        >
-          <Ionicons name="arrow-back" size={scale(22)} color={theme.text} />
-        </TouchableOpacity>
+        style={{ 
+          width: scale(38), 
+          height: scale(38), 
+          borderRadius: scale(12), 
+          backgroundColor: 'rgba(255, 255, 255, 0.15)', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          marginRight: scale(12) 
+        }} 
+        activeOpacity={0.7}
+        onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.navigate('TeacherDashboardScreen')}
+      >
+        <Ionicons name="arrow-back" size={scale(22)} color="#ffffff" />
+      </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={[styles.headerTitle, { color: theme.text }]}>Staff Members</Text>
-          <Text style={{ fontSize: scale(12), color: theme.textSecondary }}>{staff.length} available</Text>
+          <Text style={[styles.headerTitle, { color: '#fff' }]}>Staff Members</Text>
+          <Text style={{ fontSize: scale(12), color: 'rgba(255,255,255,0.8)' }}>{staff.length} available</Text>
         </View>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.navigate('LikedTeachersScreen')}>
-          <Ionicons name="heart-outline" size={scale(22)} color={theme.text} />
+        <TouchableOpacity style={[styles.backButton, { backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 8, padding: 4 }]} hitSlop={{top: 10, bottom: 10, left: 10, right: 10}} onPress={() => navigation.navigate('LikedTeachersScreen')}>
+          <Ionicons name="heart-outline" size={scale(22)} color="#fff" />
         </TouchableOpacity>
       </View>
 
@@ -222,13 +233,14 @@ export const TeachersScreen: React.FC = () => {
           </ScrollView>
         )}
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingTop: StatusBar.currentHeight || 0,
   },
   headerWrapper: {
     zIndex: 100,

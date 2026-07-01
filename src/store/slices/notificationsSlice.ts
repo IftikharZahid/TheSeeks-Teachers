@@ -9,6 +9,10 @@ export interface Notice {
     id: string;
     title: string;
     message: string;
+    category?: string;
+    targetClass?: string;
+    subject?: string;
+    teacherName?: string;
     timeAgo?: string;
     createdAt?: Timestamp;
     type: 'image' | 'initials' | 'icon';

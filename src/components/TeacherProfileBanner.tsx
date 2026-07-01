@@ -10,36 +10,32 @@ export const TeacherProfileBanner = ({ children }: { children?: React.ReactNode 
   const insets = useSafeAreaInsets();
   
   return (
-    <View style={{ position: 'relative', height: scale(160) + insets.top, overflow: 'hidden' }}>
-      {/* Gradient Background */}
-      <LinearGradient
-        colors={["#6C63FF", "#4F46E5", "#3B82F6"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={{ flex: 1, paddingTop: insets.top }}
-      >
+    <View style={{ position: 'relative', height: scale(160), overflow: 'hidden' }}>
+      {/* Solid Primary Background */}
+      <View style={{ flex: 1, backgroundColor: theme.primary, paddingTop: 0 }}>
         {/* Academy Logo (Faint) */}
         <Image 
-          source={require('../../assets/the-seeks-logo.png')}
+          source={require('../../assets/headericon.png')}
           style={{
             position: 'absolute',
-            right: scale(-10),
-            top: scale(10) + insets.top,
-            width: scale(140),
-            height: scale(140),
-            opacity: 0.15,
+            right: scale(10),
+            top: scale(-30),
+            width: scale(150),
+            height: scale(200),
+            opacity: 0.3,
           }}
           resizeMode="contain"
         />
 
         {/* Academy Watermark */}
-        <View style={{ position: 'absolute', left: scale(24), top: scale(32) + insets.top }}>
+        <View style={{ position: 'absolute', left: scale(24), top: scale(50) }}>
           <Text
             style={{
               color: "rgba(255,255,255,0.15)",
-              fontSize: scale(24),
+              fontSize: scale(20),
               fontWeight: "900",
               letterSpacing: 2,
+              lineHeight: scale(24),
             }}
           >
             THE SEEKS
@@ -48,9 +44,10 @@ export const TeacherProfileBanner = ({ children }: { children?: React.ReactNode 
           <Text
             style={{
               color: "rgba(255,255,255,0.15)",
-              fontSize: scale(18),
+              fontSize: scale(15),
               fontWeight: "700",
               letterSpacing: 1,
+              marginTop: scale(-4),
             }}
           >
             ACADEMY
@@ -59,8 +56,8 @@ export const TeacherProfileBanner = ({ children }: { children?: React.ReactNode 
           <Text
             style={{
               color: "rgba(255,255,255,0.12)",
-              fontSize: scale(12),
-              marginTop: scale(4),
+              fontSize: scale(10),
+              marginTop: scale(-2),
             }}
           >
             Fort Abbas
@@ -87,7 +84,7 @@ export const TeacherProfileBanner = ({ children }: { children?: React.ReactNode 
             {children}
           </View>
         )}
-      </LinearGradient>
+      </View>
     </View>
   );
 };

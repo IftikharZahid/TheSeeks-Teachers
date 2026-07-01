@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, StatusBar, Keyboard } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Keyboard, StatusBar } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -54,23 +54,34 @@ export const TeacherSuggestionsScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: isDark ? theme.background : '#F3F4F6' }]} edges={['top']}>
-      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={isDark ? theme.background : '#F3F4F6'} />
+    <View style={[styles.container, { backgroundColor: isDark ? theme.background : '#F3F4F6', paddingTop: StatusBar.currentHeight || 0 }]}>
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: StatusBar.currentHeight || 0, backgroundColor: theme.primary, zIndex: 999 }} />
+      <StatusBar barStyle="light-content" backgroundColor={isDark ? theme.card : theme.primary} translucent={false} />
       
       {/* Modern Header */}
-      <View style={[styles.header, { backgroundColor: isDark ? theme.card : '#ffffff' }]}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <View style={[styles.iconCircle, { backgroundColor: isDark ? '#334155' : '#F3F4F6' }]}>
-            <Ionicons name="chevron-back" size={scale(24)} color={theme.text} />
-          </View>
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>Submit Suggestion</Text>
+      <View style={[styles.header, { backgroundColor: theme.primary }]}>
+        <TouchableOpacity
+        style={{ 
+          width: scale(38), 
+          height: scale(38), 
+          borderRadius: scale(12), 
+          backgroundColor: 'rgba(255, 255, 255, 0.15)', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          marginRight: scale(12) 
+        }} 
+        activeOpacity={0.7}
+        onPress={() => navigation.goBack()}
+      >
+        <Ionicons name="arrow-back" size={scale(22)} color="#ffffff" />
+      </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: '#fff' }]}>Submit Suggestion</Text>
         <View style={{ width: scale(40) }} />
       </View>
 
         <KeyboardAvoidingView 
           style={{ flex: 1 }} 
-          behavior="padding"
+          behavior="height"
           keyboardVerticalOffset={scale(20)}
         >
           <ScrollView 
@@ -163,12 +174,12 @@ export const TeacherSuggestionsScreen: React.FC = () => {
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, paddingTop: StatusBar.currentHeight || 0 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -58,15 +58,17 @@ export const AttendanceClassesListScreen: React.FC = () => {
   });
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top', 'left', 'right']}>
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: StatusBar.currentHeight || 0 }]}>
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: StatusBar.currentHeight || 0, backgroundColor: theme.primary, zIndex: 999 }} />
+      <StatusBar backgroundColor="transparent" barStyle="light-content" translucent={true} />
       {/* Header */}
-      <View style={[styles.header, { borderBottomColor: theme.border }]}>
+      <View style={[styles.header, { backgroundColor: theme.primary, borderBottomColor: 'transparent' }]}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={22} color={theme.text} />
+          <Ionicons name="arrow-back" size={22} color="#ffffff" />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>Manage Attendance</Text>
-        <View style={[styles.totalStrengthBadge, { backgroundColor: theme.primary + '18', borderColor: theme.primary + '30' }]}>
-          <Text style={[styles.totalStrengthText, { color: theme.primary }]}>
+        <Text style={[styles.headerTitle, { color: '#ffffff' }]}>Manage Attendance</Text>
+        <View style={[styles.totalStrengthBadge, { backgroundColor: 'rgba(255,255,255,0.15)', borderColor: 'rgba(255,255,255,0.3)' }]}>
+          <Text style={[styles.totalStrengthText, { color: '#ffffff' }]}>
             {students.length} Total
           </Text>
         </View>
@@ -106,7 +108,7 @@ export const AttendanceClassesListScreen: React.FC = () => {
           })}
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -115,12 +117,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
+    marginTop: -1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: scale(16),
     paddingVertical: scale(12),
     borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomLeftRadius: scale(24),
+    borderBottomRightRadius: scale(24),
   },
   backBtn: {
     padding: scale(4),

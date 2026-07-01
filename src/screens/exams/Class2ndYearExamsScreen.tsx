@@ -1295,21 +1295,26 @@ export const Class2ndYearExamsScreen: React.FC = () => {
     .filter(Boolean).length;
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top', 'left', 'right']}>
-      {/* ── Header ── */}
-      <View style={[styles.header, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.headerIconButton, { backgroundColor: theme.background, borderColor: theme.border }]}>
-          <Ionicons name="chevron-back" size={22} color={theme.text} />
-        </TouchableOpacity>
-        <View style={styles.headerTitleBlock}>
-          <Text style={[styles.headerTitle, { color: theme.text }]}>2nd Year Exams</Text>
-          <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Results, marks, and student progress</Text>
+    <View style={[styles.container, { backgroundColor: isDark ? theme.background : '#f8fafc', paddingTop: StatusBar.currentHeight || 0 }]}>
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: StatusBar.currentHeight || 0, backgroundColor: isDark ? theme.card : theme.primary, zIndex: 999 }} />
+        <StatusBar barStyle="light-content" backgroundColor="transparent" translucent={true} />
+        {/* Header */}
+        <View style={[styles.header, { backgroundColor: isDark ? theme.card : theme.primary, borderBottomColor: isDark ? theme.border : 'transparent' }]}>
+          <TouchableOpacity
+            style={{ width: scale(38), height: scale(38), borderRadius: scale(12), backgroundColor: isDark ? theme.border : 'rgba(255, 255, 255, 0.15)', justifyContent: 'center', alignItems: 'center', marginRight: scale(12) }} 
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons name="arrow-back" size={scale(22)} color={isDark ? theme.text : '#ffffff'} />
+          </TouchableOpacity>
+          <View style={styles.headerTitleBlock}>
+            <Text style={[styles.headerTitle, { color: isDark ? theme.text : '#ffffff' }]}>2nd Year Exams</Text>
+            <Text style={[styles.headerSubtitle, { color: isDark ? theme.textSecondary : 'rgba(255,255,255,0.7)' }]}>Results, marks, and student progress</Text>
+          </View>
+          <TouchableOpacity onPress={() => openModal()} style={[styles.headerPrimaryButton, { backgroundColor: isDark ? theme.primary + '30' : 'rgba(255,255,255,0.2)' }]}>
+            <Ionicons name="add" size={18} color={isDark ? theme.text : '#fff'} />
+            <Text style={[styles.headerPrimaryButtonText, { color: isDark ? theme.text : '#ffffff' }]}>New</Text>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity onPress={() => openModal()} style={[styles.headerPrimaryButton, { backgroundColor: theme.primary }]}>
-          <Ionicons name="add" size={18} color="#fff" />
-          <Text style={styles.headerPrimaryButtonText}>New</Text>
-        </TouchableOpacity>
-      </View>
 
 
 
@@ -1538,27 +1543,29 @@ export const Class2ndYearExamsScreen: React.FC = () => {
       {/* ══════════════════════════════════════════════════════════════════════
           EDIT / ADD MODAL
       ══════════════════════════════════════════════════════════════════════ */}
-      <Modal visible={modalVisible} animationType="slide" transparent statusBarTranslucent>
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior="height">
-          <View style={{ flex: 1, backgroundColor: theme.background }}>
-            <View style={{ flex: 1, paddingTop: (StatusBar.currentHeight || 30) }}>
+      <Modal visible={modalVisible} animationType="slide" transparent={true} statusBarTranslucent={true} onRequestClose={() => { setModalVisible(false); resetForm(); }}>
+          <View style={{ flex: 1, backgroundColor: isDark ? theme.background : '#f8fafc', paddingTop: StatusBar.currentHeight || 0 }}>
+            <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: StatusBar.currentHeight || 0, backgroundColor: isDark ? theme.card : theme.primary, zIndex: 999 }} />
             {/* Header */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: scale(16), paddingVertical: scale(14), borderBottomWidth: 1, borderBottomColor: theme.border, backgroundColor: theme.card }}>
-              <View>
-                <Text style={{ fontSize: scale(16), fontWeight: '800', color: theme.text }}>{editingExam ? 'Edit Record' : 'New Record'}</Text>
-                <Text style={{ fontSize: scale(11), color: theme.textSecondary, marginTop: scale(1) }}>{editingExam ? 'Update exam details' : 'Enter student exam details'}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(16), paddingVertical: scale(12), backgroundColor: theme.primary }}>
+              <TouchableOpacity
+                style={{ width: scale(38), height: scale(38), borderRadius: scale(12), backgroundColor: isDark ? theme.border : 'rgba(255, 255, 255, 0.15)', justifyContent: 'center', alignItems: 'center', marginRight: scale(12) }} 
+                activeOpacity={0.7}
+                onPress={() => { setModalVisible(false); resetForm(); }}
+              >
+                <Ionicons name="arrow-back" size={scale(22)} color={isDark ? theme.text : '#ffffff'} />
+              </TouchableOpacity>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: scale(17), fontWeight: '800', color: '#fff' }}>{editingExam ? 'Edit Record' : 'New Record'}</Text>
+                <Text style={{ fontSize: scale(11), color: 'rgba(255,255,255,0.75)', marginTop: scale(1) }}>{editingExam ? 'Update exam details' : 'Enter student exam details'}</Text>
               </View>
-              <View style={{ flexDirection: 'row', gap: scale(8) }}>
-                <TouchableOpacity onPress={() => { setModalVisible(false); resetForm(); }} style={{ width: scale(32), height: scale(32), borderRadius: scale(16), backgroundColor: theme.error + '15', alignItems: 'center', justifyContent: 'center' }}>
-                  <Ionicons name="close" size={16} color={theme.error} />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={handleSaveExam} style={{ width: scale(32), height: scale(32), borderRadius: scale(16), backgroundColor: theme.primary, alignItems: 'center', justifyContent: 'center' }}>
-                  <Ionicons name="checkmark" size={16} color="#fff" />
-                </TouchableOpacity>
-              </View>
+              <TouchableOpacity onPress={handleSaveExam} style={{ paddingHorizontal: scale(14), paddingVertical: scale(8), borderRadius: scale(20), backgroundColor: isDark ? theme.primary + '30' : 'rgba(255,255,255,0.2)', flexDirection: 'row', alignItems: 'center', gap: scale(4) }}>
+                <Ionicons name="checkmark" size={16} color={isDark ? theme.text : '#fff'} />
+                <Text style={{ fontSize: scale(12), fontWeight: '700', color: '#fff' }}>Save</Text>
+              </TouchableOpacity>
             </View>
-
-            <ScrollView
+            <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+              <ScrollView
               style={{ flex: 1 }}
               contentContainerStyle={{ padding: scale(12), paddingBottom: scale(30) }}
               showsVerticalScrollIndicator={false}
@@ -2003,7 +2010,7 @@ export const Class2ndYearExamsScreen: React.FC = () => {
                       <TextInput
                         style={[{
                           flex: 1, height: scale(36), borderWidth: 1, borderRadius: scale(7),
-                          paddingHorizontal: 0, fontSize: scale(13), fontWeight: '700', textAlign: 'center',
+                          padding: 0, textAlignVertical: 'center', fontSize: scale(13), fontWeight: '700', textAlign: 'center',
                           backgroundColor: theme.card, color: theme.text, borderColor: theme.border,
                         }]}
                         placeholder="—"
@@ -2019,7 +2026,7 @@ export const Class2ndYearExamsScreen: React.FC = () => {
                       <TextInput
                         style={[{
                           flex: 1, height: scale(36), borderWidth: 1, borderRadius: scale(7),
-                          paddingHorizontal: 0, fontSize: scale(13), fontWeight: '800', textAlign: 'center',
+                          padding: 0, textAlignVertical: 'center', fontSize: scale(13), fontWeight: '800', textAlign: 'center',
                           backgroundColor: theme.primary + '08', color: theme.primary,
                           borderColor: theme.primary + '30',
                         }]}
@@ -2160,7 +2167,7 @@ export const Class2ndYearExamsScreen: React.FC = () => {
                       />
                     </View>
                     <TouchableOpacity onPress={handleAddBook} style={[styles.compactAddBtn, { backgroundColor: theme.primary }]}>
-                      <Ionicons name="add" size={18} color="#fff" />
+                      <Ionicons name="add" size={18} color={isDark ? theme.text : '#fff'} />
                     </TouchableOpacity>
                   </View>
 
@@ -2210,7 +2217,7 @@ export const Class2ndYearExamsScreen: React.FC = () => {
 
             {/* Save Button */}
             <TouchableOpacity onPress={handleSaveExam} style={[styles.fsFormSaveButton, { backgroundColor: theme.primary }]}>
-              <Ionicons name={editingExam ? 'checkmark-circle' : 'save-outline'} size={18} color="#fff" />
+              <Ionicons name={editingExam ? 'checkmark-circle' : 'save-outline'} size={18} color={isDark ? theme.text : '#fff'} />
               <Text style={styles.fsFormSaveButtonText}>{editingExam ? 'Update Record' : 'Save Record'}</Text>
             </TouchableOpacity>
 
@@ -2218,10 +2225,9 @@ export const Class2ndYearExamsScreen: React.FC = () => {
               <Text style={[styles.fsFormCancelText, { color: theme.textSecondary }]}>Cancel</Text>
             </TouchableOpacity>
                       </ScrollView>
-            </View>
+            </KeyboardAvoidingView>
           </View>
-        </KeyboardAvoidingView>
-      </Modal>
+        </Modal>
 
       {/* ══════════════════════════════════════════════════════════════════════
           CHOICE MODAL
@@ -2286,7 +2292,7 @@ export const Class2ndYearExamsScreen: React.FC = () => {
                 style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.primary + '15', padding: scale(12), borderRadius: scale(8), marginBottom: scale(16), borderWidth: 1, borderColor: theme.primary + '30' }}
               >
                 <View style={{ width: scale(32), height: scale(32), borderRadius: scale(16), backgroundColor: '#1D6F42', alignItems: 'center', justifyContent: 'center', marginRight: scale(10) }}>
-                  <Ionicons name="download" size={16} color="#fff" />
+                  <Ionicons name="download" size={16} color={isDark ? theme.text : '#fff'} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontWeight: '700', fontSize: scale(13), color: theme.text }}>Download Excel Template</Text>
@@ -2311,7 +2317,7 @@ export const Class2ndYearExamsScreen: React.FC = () => {
                 onPress={() => { setShowUploadInstructions(false); setTimeout(() => handlePickDocument(), 500); }}
                 style={[styles.modalBtnSave, { backgroundColor: theme.primary }]}
               >
-                <Ionicons name="folder-open" size={18} color="#fff" style={{ marginRight: scale(6) }} />
+                <Ionicons name="folder-open" size={18} color={isDark ? theme.text : '#fff'} style={{ marginRight: scale(6) }} />
                 <Text style={[styles.modalBtnText, { color: '#fff' }]}>Select File</Text>
               </TouchableOpacity>
             </View>
@@ -2519,7 +2525,7 @@ export const Class2ndYearExamsScreen: React.FC = () => {
                 onPress={() => { setShowOptionsModal(false); if (selectedExamForOptions) openModal(selectedExamForOptions); }}
                 style={{ flex: 1, paddingVertical: scale(13), backgroundColor: theme.primary, borderRadius: scale(10), flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}
               >
-                <Ionicons name="create-outline" size={16} color="#fff" style={{ marginRight: scale(6) }} />
+                <Ionicons name="create-outline" size={16} color={isDark ? theme.text : '#fff'} style={{ marginRight: scale(6) }} />
                 <Text style={{ color: '#fff', fontWeight: '700', fontSize: scale(14) }}>Edit</Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -2533,10 +2539,7 @@ export const Class2ndYearExamsScreen: React.FC = () => {
           </View>
         </View>
       </Modal>
-
-
-
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -2545,7 +2548,7 @@ export const Class2ndYearExamsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   // ─── Main Container & Header ───────────────────────────────────────────────
   container: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(12), paddingVertical: scale(8), borderBottomWidth: 1, gap: scale(8) },
+  header: { marginTop: -1, flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(12), paddingVertical: scale(8), borderBottomWidth: 1, gap: scale(8) },
   headerTitleBlock: { flex: 1 },
   headerTitle: { fontSize: scale(17), fontWeight: '800', letterSpacing: 0.1 },
   headerSubtitle: { fontSize: scale(10), fontWeight: '500', marginTop: 0 },
@@ -2603,7 +2606,7 @@ const styles = StyleSheet.create({
   
   // ─── Book Management ──────────────────────────────────────────────────────
   addBookRow: { flexDirection: 'row', alignItems: 'center', padding: scale(8), borderRadius: scale(8), borderWidth: 1, marginBottom: scale(8) },
-  compactInput: { borderWidth: 1, borderRadius: scale(8), paddingHorizontal: 0, height: scale(40), fontSize: scale(13), textAlign: 'center' },
+  compactInput: { borderWidth: 1, borderRadius: scale(8), padding: 0, height: scale(40), fontSize: scale(13), textAlign: 'center', textAlignVertical: 'center' },
   compactAddBtn: { width: scale(36), height: scale(36), borderRadius: scale(8), alignItems: 'center', justifyContent: 'center' },
   teacherMarksPanel: { gap: scale(7) },
   teacherSubjectPill: { minHeight: scale(38), borderRadius: scale(7), borderWidth: 1, paddingHorizontal: scale(8), paddingVertical: scale(6), flexDirection: 'row', alignItems: 'center', gap: scale(8) },
@@ -2611,7 +2614,7 @@ const styles = StyleSheet.create({
   teacherSubjectLabel: { fontSize: scale(8), fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.35 },
   teacherSubjectName: { fontSize: scale(13), fontWeight: '800', marginTop: scale(1) },
   teacherMarksRow: { flexDirection: 'row', gap: scale(8) },
-  teacherMarkInput: { height: scale(36), borderWidth: 1, borderRadius: scale(7), paddingHorizontal: 0, fontSize: scale(13), fontWeight: '800', textAlign: 'center' },
+  teacherMarkInput: { height: scale(36), borderWidth: 1, borderRadius: scale(7), padding: 0, textAlignVertical: 'center', fontSize: scale(13), fontWeight: '800', textAlign: 'center' },
   
   // ─── Dropdowns & Lists ────────────────────────────────────────────────────
   studentDropdownRow: { flexDirection: 'row', alignItems: 'center', gap: scale(6) },

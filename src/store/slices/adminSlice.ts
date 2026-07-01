@@ -143,7 +143,7 @@ export const fetchAdminFeeRecords = createAsyncThunk(
                 const pending = feeData.totalFee - feeData.paidAmount;
                 return {
                     studentId: student.id,
-                    studentName: student.fullname || student.name || 'Unknown',
+                    studentName: student.name || student.fullname || 'Unknown',
                     rollno: student.rollno || '',
                     class: student.class || '',
                     month: student.month || '',
@@ -155,7 +155,7 @@ export const fetchAdminFeeRecords = createAsyncThunk(
             } else {
                 return {
                     studentId: student.id,
-                    studentName: student.fullname || student.name || 'Unknown',
+                    studentName: student.name || student.fullname || 'Unknown',
                     rollno: student.rollno || '',
                     class: student.class || '',
                     month: student.month || '',
@@ -581,7 +581,7 @@ export const initFeeListener = (dispatch: Dispatch) => {
                 const pending = feeData.totalFee - feeData.paidAmount;
                 return {
                     studentId: student.id,
-                    studentName: student.fullname || student.name || 'Unknown',
+                    studentName: student.name || student.fullname || 'Unknown',
                     rollno: student.rollno || '',
                     class: student.class || '',
                     month: student.month || '',
@@ -593,7 +593,7 @@ export const initFeeListener = (dispatch: Dispatch) => {
             }
             return {
                 studentId: student.id,
-                studentName: student.fullname || student.name || 'Unknown',
+                studentName: student.name || student.fullname || 'Unknown',
                 rollno: student.rollno || '',
                 class: student.class || '',
                 month: student.month || '',

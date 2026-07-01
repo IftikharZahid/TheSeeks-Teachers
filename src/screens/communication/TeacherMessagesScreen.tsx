@@ -819,36 +819,40 @@ export const MessagesScreen: React.FC = () => {
       <View style={{ flex: 1, backgroundColor: isDark ? theme.background : '#f1f5f9' }}>
         <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
         {/* Navy wave header banner */}
-        <Image
-          source={require('../../../assets/header_bg.png')}
-          style={msgListStyles.headerBanner}
-          resizeMode="stretch"
-        />
+        <View style={[msgListStyles.headerBanner, { backgroundColor: isDark ? theme.card : '#030b2e' }]}>
+          {!isDark && (
+            <Image
+              source={require('../../../assets/header_bg.png')}
+              style={{ width: '100%', height: '100%' }}
+              resizeMode="stretch"
+            />
+          )}
+        </View>
 
         {/* Header row: back + title + bell */}
-        <SafeAreaView edges={['top']} style={msgListStyles.headerRow}>
-          <TouchableOpacity style={msgListStyles.headerBtn} onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={scale(20)} color="#fff" />
+        <View style={[msgListStyles.headerRow, { paddingTop: insets.top + scale(8) }]}>
+          <TouchableOpacity style={[msgListStyles.headerBtn, { backgroundColor: isDark ? theme.border : 'rgba(255,255,255,0.15)' }]} onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={scale(20)} color={isDark ? theme.text : '#fff'} />
           </TouchableOpacity>
           <View style={{ flex: 1, alignItems: 'center' }}>
-            <Text style={msgListStyles.headerTitle}>Messages</Text>
+            <Text style={[msgListStyles.headerTitle, { color: isDark ? theme.text : '#fff' }]}>Messages</Text>
             {totalUnread > 0 && (
-              <Text style={msgListStyles.headerSubtitle}>{totalUnread} unread</Text>
+              <Text style={[msgListStyles.headerSubtitle, { color: isDark ? theme.textSecondary : 'rgba(255,255,255,0.65)' }]}>{totalUnread} unread</Text>
             )}
           </View>
-          <TouchableOpacity style={msgListStyles.headerBellBtn} onPress={() => navigation.navigate('LibraryScreen')}>
-            <Ionicons name="notifications-outline" size={scale(20)} color="#fff" />
+          <TouchableOpacity style={[msgListStyles.headerBellBtn, { backgroundColor: isDark ? theme.border : 'rgba(255,255,255,0.18)' }]} onPress={() => navigation.navigate('LibraryScreen')}>
+            <Ionicons name="notifications-outline" size={scale(20)} color={isDark ? theme.text : '#fff'} />
             {totalUnread > 0 && (
               <View style={msgListStyles.bellBadge}>
                 <Text style={msgListStyles.bellBadgeText}>{totalUnread > 99 ? '99+' : totalUnread}</Text>
               </View>
             )}
           </TouchableOpacity>
-        </SafeAreaView>
+        </View>
 
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingTop: insets.top + scale(60), paddingBottom: scale(100), paddingHorizontal: scale(16) }}
+          contentContainerStyle={{ paddingTop: scale(10), paddingBottom: scale(100), paddingHorizontal: scale(16) }}
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366f1" />}
         >
@@ -1059,24 +1063,26 @@ export const MessagesScreen: React.FC = () => {
     <SafeAreaView style={[styles.container, { backgroundColor: theme.backgroundSecondary }]} edges={['left', 'right']}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       {/* Header */}
-      <View style={{ overflow: 'hidden', backgroundColor: '#030b2e', zIndex: 10, elevation: 4 }}>
+      <View style={{ overflow: 'hidden', backgroundColor: isDark ? theme.card : '#030b2e', zIndex: 10, elevation: 4 }}>
+        {!isDark && (
         <Image
           source={require('../../../assets/header_bg.png')}
           style={{ position: 'absolute', top: 0, left: 0, right: 0, height: scale(140), opacity: 0.85 }}
           resizeMode="cover"
         />
+        )}
         <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(14), paddingTop: insets.top + scale(10), paddingBottom: scale(14) }}>
           <TouchableOpacity
             onPress={() => setActiveGroup(null)}
-            style={{ width: scale(36), height: scale(36), borderRadius: scale(18), backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center' }}
+            style={{ width: scale(36), height: scale(36), borderRadius: scale(18), backgroundColor: isDark ? theme.border : 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center' }}
           >
-            <Ionicons name="arrow-back" size={scale(20)} color="#fff" />
+            <Ionicons name="arrow-back" size={scale(20)} color={isDark ? theme.text : '#fff'} />
           </TouchableOpacity>
           <View style={{ flex: 1, marginLeft: scale(12) }}>
-            <Text style={{ fontSize: scale(17), fontWeight: '700', color: '#fff', letterSpacing: 0.3 }} numberOfLines={1}>
+            <Text style={{ fontSize: scale(17), fontWeight: '700', color: isDark ? theme.text : '#fff', letterSpacing: 0.3 }} numberOfLines={1}>
               {groupObj?.name || 'Chat'}
             </Text>
-            <Text style={{ fontSize: scale(11), color: 'rgba(255,255,255,0.7)', marginTop: scale(2), fontWeight: '500' }}>
+            <Text style={{ fontSize: scale(11), color: isDark ? theme.textSecondary : 'rgba(255,255,255,0.7)', marginTop: scale(2), fontWeight: '500' }}>
               {currentMessages.length} Messages
             </Text>
           </View>
@@ -2044,8 +2050,6 @@ const msgListStyles = StyleSheet.create({
   },
   // ── Header Row ──
   headerRow: {
-    position: 'absolute',
-    top: 0, left: 0, right: 0,
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: scale(14),
     paddingTop: scale(8), paddingBottom: scale(8),

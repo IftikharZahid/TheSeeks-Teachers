@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, Modal, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Animated, Modal, TouchableWithoutFeedback, StatusBar } from 'react-native';
 import { Image } from 'expo-image';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';

@@ -3,17 +3,23 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../api/firebaseConfig';
 import type { Dispatch } from '@reduxjs/toolkit';
 
+export interface LibraryCategory {
+    name: string;
+    icon: string;
+    subtitle?: string;
+}
+
 interface AppSettingsState {
     classes: string[];
     books: string[];
-    libraryCategories: string[];
+    libraryCategories: LibraryCategory[];
     loading: boolean;
 }
 
 const initialState: AppSettingsState = {
     classes: [],
     books: [],
-    libraryCategories: ['All', 'Notes', 'PDF', 'Books', 'Videos', 'PPT'], // Default fallback
+    libraryCategories: [],   // Empty — populated exclusively from Firebase
     loading: true,
 };
 
@@ -27,7 +33,7 @@ const appSettingsSlice = createSlice({
         setBooks(state, action: PayloadAction<string[]>) {
             state.books = action.payload;
         },
-        setLibraryCategories(state, action: PayloadAction<string[]>) {
+        setLibraryCategories(state, action: PayloadAction<LibraryCategory[]>) {
             state.libraryCategories = action.payload;
         },
         setLoading(state, action: PayloadAction<boolean>) {
@@ -54,10 +60,14 @@ export const initAppSettingsListener = (dispatch: Dispatch) => {
 
     const unsubLibCats = onSnapshot(doc(db, 'appSettings', 'libraryCategories'), (docSnap) => {
         if (docSnap.exists() && Array.isArray(docSnap.data().list) && docSnap.data().list.length > 0) {
-            dispatch(setLibraryCategories(['All', ...docSnap.data().list]));
+            const list = docSnap.data().list.map((item: any) => {
+                if (typeof item === 'string') return { name: item, icon: 'folder' };
+                return item;
+            });
+            dispatch(setLibraryCategories([{ name: 'All', icon: 'layers' }, ...list]));
         } else {
-             // Fallback
-             dispatch(setLibraryCategories(['All', 'Notes', 'PDF', 'Books', 'Videos', 'PPT']));
+            // Firebase has no categories yet — dispatch empty so skeleton stops
+            dispatch(setLibraryCategories([]));
         }
         dispatch(setLoading(false));
     });

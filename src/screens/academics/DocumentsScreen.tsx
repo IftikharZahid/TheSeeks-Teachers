@@ -1,17 +1,14 @@
 import React, { useState } from 'react';
-import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity,
-  TextInput, ScrollView, Modal, Dimensions, Linking,
-  KeyboardAvoidingView, Platform, StatusBar,
-} from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, ScrollView, Modal, Dimensions, Linking, KeyboardAvoidingView, Platform, Animated, StatusBar } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAppSelector, useAppDispatch } from '../../store/hooks';
 import { useTheme } from '../../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { scale } from '../../utils/responsive';
 import { markAsRead } from '../../store/slices/notificationsSlice';
 import type { Notice } from '../../store/slices/notificationsSlice';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const { height } = Dimensions.get('window');
 
@@ -97,9 +94,10 @@ const typeOf = (notice: any) => {
 };
 
 /* ═══════════════════════════════════════════════════ */
-export const LibraryScreen: React.FC = () => {
+export const DocumentsScreen: React.FC = () => {
   const { theme, isDark } = useTheme();
   const navigation = useNavigation<any>();
+  const route      = useRoute<any>();
   const dispatch   = useAppDispatch();
   const insets     = useSafeAreaInsets();
 
@@ -108,7 +106,12 @@ export const LibraryScreen: React.FC = () => {
   const classes   = useAppSelector((s: any) => s.appSettings?.classes  as string[]) || [];
   const subjects  = useAppSelector((s: any) => s.appSettings?.books    as string[]) || [];
 
-  const unread    = notices.filter(n => !readIds.includes(n.id)).length;
+  const categoryFilter = route.params?.category;
+  const filteredByCategoryNotices = categoryFilter 
+    ? notices.filter((n: any) => n.category === categoryFilter)
+    : notices;
+
+  const unread    = filteredByCategoryNotices.filter(n => !readIds.includes(n.id)).length;
 
   const [search,     setSearch]     = useState('');
   const [selClass,   setSelClass]   = useState('All Classes');
@@ -125,12 +128,12 @@ export const LibraryScreen: React.FC = () => {
   });
 
   /* Stats */
-  const totalItems   = notices.length;
-  const subjCount    = subjects.length || new Set(notices.map((n: any) => n.subject).filter(Boolean)).size;
-  const classCount   = classes.length  || new Set(notices.map((n: any) => n.targetClass).filter(Boolean)).size;
+  const totalItems   = filteredByCategoryNotices.length;
+  const subjCount    = new Set(filteredByCategoryNotices.map((n: any) => n.subject).filter(Boolean)).size;
+  const classCount   = new Set(filteredByCategoryNotices.map((n: any) => n.targetClass).filter(Boolean)).size;
 
   /* Filtered */
-  const filtered = notices.filter((n: any) => {
+  const filtered = filteredByCategoryNotices.filter((n: any) => {
     const cls  = n.targetClass || '';
     const subj = n.subject     || '';
     if (search) {
@@ -339,28 +342,35 @@ export const LibraryScreen: React.FC = () => {
 
   /* ═══════════════════════════════════════════════════ */
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: theme.background }]}
-      edges={['top', 'left', 'right']}
-    >
-      <StatusBar
-        barStyle={isDark ? 'light-content' : 'dark-content'}
-        backgroundColor={theme.card}
-      />
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: StatusBar.currentHeight || 0 }]}>
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: StatusBar.currentHeight || 0, backgroundColor: theme.primary, zIndex: 999 }} />
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent={true} />
 
       {/* ── Header ── */}
-      <View style={[styles.header, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
+      <View style={[styles.header, { backgroundColor: theme.primary, borderBottomColor: 'transparent' }]}>
         <TouchableOpacity
-          onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.navigate('TeacherDashboardScreen' as any)}
-          style={styles.headerBtn}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons name="arrow-back" size={scale(22)} color={theme.text} />
-        </TouchableOpacity>
+        style={{ 
+          width: scale(38), 
+          height: scale(38), 
+          borderRadius: scale(12), 
+          backgroundColor: 'rgba(255, 255, 255, 0.15)', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          marginRight: scale(12) 
+        }} 
+        activeOpacity={0.7}
+        onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.navigate('LibraryScreen' as any)}
+      >
+        <Ionicons name="arrow-back" size={scale(22)} color={isDark ? theme.text : '#ffffff'} />
+      </TouchableOpacity>
 
         <View style={{ flex: 1 }}>
-          <Text style={[styles.headerTitle, { color: theme.text }]}>e-Library</Text>
-          <Text style={[styles.headerSub, { color: theme.placeholder }]}>Study materials & resources</Text>
+          <Text style={[styles.headerTitle, { color: isDark ? theme.text : '#fff' }]} numberOfLines={1}>
+            {categoryFilter || 'Documents'}
+          </Text>
+          <Text style={[styles.headerSub, { color: isDark ? theme.textSecondary : 'rgba(255,255,255,0.8)' }]}>
+            {categoryFilter ? `All ${categoryFilter.toLowerCase()} materials` : 'All educational materials & notes'}
+          </Text>
         </View>
 
         {unread > 0 && (
@@ -371,7 +381,7 @@ export const LibraryScreen: React.FC = () => {
         )}
       </View>
 
-      {/* ── List ── */}
+      {/* ── List / Content ── */}
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={undefined}>
         <FlatList
           data={filtered}
@@ -414,7 +424,7 @@ export const LibraryScreen: React.FC = () => {
                 Select {picker.kind}
               </Text>
               <TouchableOpacity onPress={() => setPicker(p => ({ ...p, open: false }))}>
-                <Ionicons name="close" size={scale(20)} color={theme.text} />
+                <Ionicons name="close" size={scale(22)} color="#fff" />
               </TouchableOpacity>
             </View>
             <ScrollView style={{ maxHeight: height * 0.48 }} showsVerticalScrollIndicator={false}>
@@ -503,7 +513,7 @@ export const LibraryScreen: React.FC = () => {
                     style={[styles.popupCloseBtn, { backgroundColor: isDark ? '#1e293b' : '#f1f5f9' }]}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
-                    <Ionicons name="close" size={scale(18)} color={theme.text} />
+                    <Ionicons name="close" size={scale(22)} color="#fff" />
                   </TouchableOpacity>
                 </View>
 
@@ -570,16 +580,16 @@ export const LibraryScreen: React.FC = () => {
           })()}
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 };
 
 /* ═══════════════════════════════════════════════════ */
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, paddingTop: StatusBar.currentHeight || 0 },
 
   /* Header */
-  header: {
+  header: { borderBottomLeftRadius: scale(24), borderBottomRightRadius: scale(24),
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: scale(16),
@@ -724,4 +734,4 @@ const styles = StyleSheet.create({
   richBox:         { padding: scale(14), borderRadius: scale(12), borderWidth: 1, minHeight: scale(60) },
 });
 
-export default LibraryScreen;
+export default DocumentsScreen;

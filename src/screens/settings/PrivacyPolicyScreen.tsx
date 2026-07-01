@@ -1,13 +1,5 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  Linking,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Linking, StatusBar } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,20 +7,30 @@ import { scale } from '../../utils/responsive';
 
 export const PrivacyPolicyScreen: React.FC = () => {
   const navigation = useNavigation();
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top', 'left', 'right']}>
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: StatusBar.currentHeight || 0 }]}>
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: StatusBar.currentHeight || 0, backgroundColor: theme.primary, zIndex: 999 }} />
+      <StatusBar barStyle="light-content" backgroundColor={isDark ? theme.card : theme.primary} translucent={false} />
       {/* Header */}
-      <View style={[styles.header, { borderBottomColor: theme.border }]}>
+      <View style={[styles.header, { backgroundColor: theme.primary, borderBottomColor: 'transparent' }]}>
         <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={[styles.backBtn, { backgroundColor: theme.backgroundSecondary }]}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="arrow-back" size={20} color={theme.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>Privacy & Policy</Text>
+        style={{ 
+          width: scale(38), 
+          height: scale(38), 
+          borderRadius: scale(12), 
+          backgroundColor: 'rgba(255, 255, 255, 0.15)', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          marginRight: scale(12) 
+        }} 
+        activeOpacity={0.7}
+        onPress={() => navigation.goBack()}
+      >
+        <Ionicons name="arrow-back" size={scale(22)} color="#ffffff" />
+      </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: '#fff' }]}>Privacy & Policy</Text>
         <View style={{ width: scale(36) }} />
       </View>
 
@@ -150,12 +152,12 @@ export const PrivacyPolicyScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, paddingTop: StatusBar.currentHeight || 0 },
 
   header: {
     flexDirection: 'row',

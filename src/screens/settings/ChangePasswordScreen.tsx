@@ -1,6 +1,6 @@
 import { scale } from '../../utils/responsive';
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform, ActivityIndicator, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { auth, db } from '../../api/firebaseConfig';
@@ -141,16 +141,27 @@ const ChangePasswordScreen = () => {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: StatusBar.currentHeight || 0 }]}>
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: StatusBar.currentHeight || 0, backgroundColor: theme.primary, zIndex: 999 }} />
+      <StatusBar barStyle="light-content" backgroundColor={isDark ? theme.card : theme.primary} translucent={false} />
       {/* Compact Header matching SettingsScreen */}
-      <View style={[styles.header, { borderBottomColor: theme.border }]}>
+      <View style={[styles.header, { backgroundColor: theme.primary, borderBottomColor: 'transparent' }]}>
         <TouchableOpacity
-          style={[styles.backButton, { backgroundColor: theme.backgroundSecondary }]}
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="arrow-back" size={20} color={theme.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>Change Password</Text>
+        style={{ 
+          width: scale(38), 
+          height: scale(38), 
+          borderRadius: scale(12), 
+          backgroundColor: 'rgba(255, 255, 255, 0.15)', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          marginRight: scale(12) 
+        }} 
+        activeOpacity={0.7}
+        onPress={() => navigation.goBack()}
+      >
+        <Ionicons name="arrow-back" size={scale(22)} color="#ffffff" />
+      </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: '#fff' }]}>Change Password</Text>
         <View style={{ width: scale(36) }} />
       </View>
 
@@ -191,13 +202,14 @@ const ChangePasswordScreen = () => {
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingTop: StatusBar.currentHeight || 0,
   },
   header: {
     flexDirection: 'row',

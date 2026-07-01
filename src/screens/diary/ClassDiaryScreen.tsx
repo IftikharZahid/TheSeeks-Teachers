@@ -328,26 +328,33 @@ export const ClassDiaryScreen: React.FC = () => {
 
   const renderModalContent = () => (
     <View style={{ flex: 1 }}>
-
       {/* Header */}
-      <View style={[styles.modalHeader, { borderBottomColor: theme.border, backgroundColor: theme.card }]}>
+      <View style={[styles.modalHeader, { borderBottomColor: 'transparent', backgroundColor: theme.primary, marginTop: -1 }]}>
         <View style={styles.modalHeaderLeft}>
-          <View style={[styles.modalIconWrap, { backgroundColor: 'rgba(99,102,241,0.12)' }]}>
-            <Ionicons name={editingEntryId ? 'pencil' : 'book'} size={scale(15)} color="#6366f1" />
+          <View style={[styles.modalIconWrap, { backgroundColor: 'rgba(255, 255, 255, 0.15)' }]}>
+            <Ionicons name={editingEntryId ? 'pencil' : 'book'} size={scale(15)} color="#ffffff" />
           </View>
           <View>
-            <Text style={[styles.modalTitle, { color: theme.text }]}>
+            <Text style={[styles.modalTitle, { color: '#ffffff' }]}>
               {editingEntryId ? 'Edit Entry' : 'New Diary Entry'}
             </Text>
-            <Text style={[styles.modalSubtitle, { color: theme.textSecondary }]}>{selectedClass}</Text>
+            <Text style={[styles.modalSubtitle, { color: 'rgba(255, 255, 255, 0.8)' }]}>
+              {viewedDate.toDateString()}
+            </Text>
           </View>
         </View>
-        <TouchableOpacity
-          style={[styles.closeButton, { backgroundColor: isDark ? '#374151' : '#f3f4f6' }]}
-          onPress={() => { setModalVisible(false); setEditingEntryId(null); setTitle(''); setDetails(''); setShowSubjectPicker(false); }}
-        >
-          <Ionicons name="close" size={scale(17)} color={theme.textSecondary} />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(12) }}>
+          <TouchableOpacity onPress={handleSave} disabled={submitting}>
+            {submitting ? (
+              <ActivityIndicator color="#ffffff" size="small" />
+            ) : (
+              <Text style={{ color: '#ffffff', fontSize: scale(15), fontWeight: '700' }}>Save</Text>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.closeButton} onPress={() => setModalVisible(false)}>
+            <Ionicons name="close" size={scale(24)} color="#ffffff" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Scrollable form — Save button scrolls with content */}
@@ -493,7 +500,7 @@ export const ClassDiaryScreen: React.FC = () => {
       {/* ── Fixed Footer: Save Button pinned to keyboard edge ── */}
       <View style={[styles.modalFooter, { backgroundColor: theme.card }]}>
         <TouchableOpacity
-          style={[styles.saveButton, submitting && { opacity: 0.6 }, { marginTop: 0 }]}
+          style={[styles.saveButton, submitting && { opacity: 0.6 }, { marginTop: 0, backgroundColor: theme.primary }]}
           onPress={handleSave}
           disabled={submitting}
           activeOpacity={0.87}
@@ -513,13 +520,15 @@ export const ClassDiaryScreen: React.FC = () => {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: StatusBar.currentHeight || 0 }]}>
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: StatusBar.currentHeight || 0, backgroundColor: isDark ? theme.card : theme.primary, zIndex: 999 }} />
+      <StatusBar backgroundColor="transparent" barStyle="light-content" translucent={true} />
       {/* Header */}
-      <View style={[styles.header, { borderBottomColor: theme.border }]}>
+      <View style={[styles.header, { backgroundColor: isDark ? theme.card : theme.primary, borderBottomColor: isDark ? theme.border : 'transparent' }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={scale(24)} color={theme.text} />
+          <Ionicons name="arrow-back" size={scale(24)} color="#ffffff" />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: theme.text }]} numberOfLines={1}>{selectedClass} Diary</Text>
+        <Text style={[styles.headerTitle, { color: '#ffffff' }]} numberOfLines={1}>{selectedClass} Diary</Text>
         <TouchableOpacity 
           style={styles.headerAddButton}
           onPress={() => {
@@ -531,7 +540,7 @@ export const ClassDiaryScreen: React.FC = () => {
           }}
           activeOpacity={0.7}
         >
-          <Ionicons name="add-circle" size={scale(28)} color="#6366f1" />
+          <Ionicons name="add-circle" size={scale(28)} color="#ffffff" />
         </TouchableOpacity>
       </View>
 
@@ -612,8 +621,9 @@ export const ClassDiaryScreen: React.FC = () => {
         onRequestClose={() => setModalVisible(false)}
         statusBarTranslucent={true}
       >
-        <View style={{ flex: 1, backgroundColor: theme.card }}>
-          <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
+        <View style={{ flex: 1, backgroundColor: theme.card, paddingTop: StatusBar.currentHeight || 0 }}>
+          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: (StatusBar.currentHeight || 0) + 1, backgroundColor: theme.primary, zIndex: 999 }} />
+          <SafeAreaView style={{ flex: 1 }} edges={['bottom']}>
           <KeyboardAvoidingView
             style={{ flex: 1 }}
             behavior="padding"
@@ -626,7 +636,7 @@ export const ClassDiaryScreen: React.FC = () => {
           </SafeAreaView>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -634,13 +644,14 @@ export const ClassDiaryScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    flexDirection: 'row',
+  header: { marginTop: -1, flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: scale(16),
     paddingVertical: scale(12),
     borderBottomWidth: 1,
+    borderBottomLeftRadius: scale(24),
+    borderBottomRightRadius: scale(24),
   },
   backButton: { padding: scale(4) },
   headerTitle: { fontSize: scale(18), fontWeight: '700', flex: 1, textAlign: 'center' },

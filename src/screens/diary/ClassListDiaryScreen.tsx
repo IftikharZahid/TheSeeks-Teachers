@@ -76,24 +76,25 @@ export const DiaryScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: isDark ? theme.background : '#fafafa' }]} edges={['top', 'left', 'right']}>
-      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={isDark ? theme.background : '#fafafa'} />
+    <View style={[styles.container, { backgroundColor: isDark ? theme.background : '#fafafa', paddingTop: StatusBar.currentHeight || 0 }]}>
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: StatusBar.currentHeight || 0, backgroundColor: isDark ? theme.card : theme.primary, zIndex: 999 }} />
+      <StatusBar backgroundColor="transparent" barStyle="light-content" translucent={true} />
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: isDark ? theme.background : '#fafafa' }]}>
+      <View style={[styles.header, { backgroundColor: isDark ? theme.card : theme.primary, borderBottomColor: isDark ? theme.border : 'transparent' }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <View style={[styles.iconCircle, { backgroundColor: isDark ? '#334155' : '#F3F4F6' }]}>
-            <Ionicons name="chevron-back" size={scale(24)} color={theme.text} />
+          <View style={[styles.iconCircle, { backgroundColor: 'rgba(255, 255, 255, 0.15)' }]}>
+            <Ionicons name="chevron-back" size={scale(24)} color="#ffffff" />
           </View>
         </TouchableOpacity>
         
         <View style={{ alignItems: 'center' }}>
-          <Text style={[styles.headerTitle, { color: theme.text }]}>Class Diary</Text>
-          <View style={{ width: scale(24), height: scale(3), backgroundColor: theme.primary, borderRadius: scale(2), marginTop: scale(4) }} />
+          <Text style={[styles.headerTitle, { color: '#ffffff' }]}>Class Diary</Text>
+          <View style={{ width: scale(24), height: scale(3), backgroundColor: '#ffffff', borderRadius: scale(2), marginTop: scale(4) }} />
         </View>
 
-        <TouchableOpacity style={[styles.headerRightBtn, { backgroundColor: theme.primary }]}>
-          <Ionicons name="document-text-outline" size={scale(18)} color="#fff" />
-          <Ionicons name="add-circle" size={scale(12)} color="#fff" style={{ position: 'absolute', bottom: scale(6), right: scale(6), backgroundColor: theme.primary, borderRadius: scale(6), overflow: 'hidden' }} />
+        <TouchableOpacity style={[styles.headerRightBtn, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
+          <Ionicons name="document-text-outline" size={scale(18)} color="#ffffff" />
+          <Ionicons name="add-circle" size={scale(12)} color={isDark ? theme.card : theme.primary} style={{ position: 'absolute', bottom: scale(6), right: scale(6), backgroundColor: '#ffffff', borderRadius: scale(6), overflow: 'hidden' }} />
         </TouchableOpacity>
       </View>
 
@@ -136,7 +137,7 @@ export const DiaryScreen: React.FC = () => {
           })}
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -144,13 +145,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
+  header: { marginTop: -1, flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: scale(16),
     paddingTop: scale(16),
     paddingBottom: scale(16),
+    borderBottomLeftRadius: scale(24),
+    borderBottomRightRadius: scale(24),
   },
   backButton: {
     padding: scale(4),

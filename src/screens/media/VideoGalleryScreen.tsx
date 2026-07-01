@@ -1,6 +1,6 @@
 import { scale } from '../../utils/responsive';
 import React, { useState, useEffect } from 'react';
-import {  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, Alert, ActivityIndicator, Image, FlatList  } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, Alert, ActivityIndicator, Image, FlatList, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
@@ -245,14 +245,28 @@ export const AdminVideoGalleryScreen: React.FC = () => {
     // Update selected gallery when galleries change - REMOVED (Derived state handles this)
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top', 'left', 'right']}>
-      <View style={[styles.header, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <Ionicons name="chevron-back" size={20} color={theme.text} />
-                </TouchableOpacity>
-                <Text style={[styles.headerTitle, { color: theme.text }]}>Video Gallery</Text>
+        <View style={[styles.container, { backgroundColor: theme.background, paddingTop: StatusBar.currentHeight || 0 }]}>
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: StatusBar.currentHeight || 0, backgroundColor: isDark ? theme.card : theme.primary, zIndex: 999 }} />
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent={true} />
+      <View style={[styles.header, { backgroundColor: isDark ? theme.card : theme.primary, borderBottomColor: isDark ? theme.border : 'transparent' }]}>
+                <TouchableOpacity
+        style={{ 
+          width: scale(38), 
+          height: scale(38), 
+          borderRadius: scale(12), 
+          backgroundColor: isDark ? theme.border : 'rgba(255, 255, 255, 0.15)', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          marginRight: scale(12) 
+        }} 
+        activeOpacity={0.7}
+        onPress={() => navigation.goBack()}
+      >
+        <Ionicons name="arrow-back" size={scale(22)} color={isDark ? theme.text : '#ffffff'} />
+      </TouchableOpacity>
+                <Text style={[styles.headerTitle, { color: isDark ? theme.text : '#fff' }]}>Video Gallery</Text>
                 <TouchableOpacity onPress={() => openGalleryModal()} style={styles.addButton}>
-                    <Ionicons name="add" size={20} color={theme.primary} />
+                    <Ionicons name="add" size={20} color={isDark ? theme.text : theme.primary} />
                 </TouchableOpacity>
             </View>
 
@@ -372,9 +386,21 @@ export const AdminVideoGalleryScreen: React.FC = () => {
                 <View style={styles.modalOverlay}>
                     <View style={[styles.videosModalContent, { backgroundColor: theme.card }]}>
                         <View style={styles.videosModalHeader}>
-                            <TouchableOpacity onPress={() => setVideosListVisible(false)} style={styles.closeBtn}>
-                                <Ionicons name="chevron-back" size={20} color={theme.text} />
-                            </TouchableOpacity>
+                            <TouchableOpacity
+        style={{ 
+          width: scale(38), 
+          height: scale(38), 
+          borderRadius: scale(12), 
+          backgroundColor: 'rgba(255, 255, 255, 0.15)', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          marginRight: scale(12) 
+        }} 
+        activeOpacity={0.7}
+        onPress={() => setVideosListVisible(false)}
+      >
+        <Ionicons name="arrow-back" size={scale(22)} color="#ffffff" />
+      </TouchableOpacity>
                             <Text style={[styles.modalTitle, { color: theme.text, flex: 1, marginBottom: 0 }]}>
                                 {selectedGallery?.name}
                             </Text>
@@ -515,12 +541,12 @@ export const AdminVideoGalleryScreen: React.FC = () => {
                     </View>
                 </View>
             </Modal>
-        </SafeAreaView>
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
-    container: { flex: 1 },
+    container: { flex: 1, paddingTop: StatusBar.currentHeight || 0 },
     header: {
         flexDirection: 'row',
         alignItems: 'center',

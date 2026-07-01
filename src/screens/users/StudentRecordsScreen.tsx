@@ -1,6 +1,6 @@
 import { scale } from '../../utils/responsive';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, FlatList, TouchableOpacity, TextInput, Modal, Alert, ActivityIndicator, Image, Pressable, Dimensions, Platform, Keyboard, Animated, RefreshControl , StatusBar} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, FlatList, TouchableOpacity, TextInput, Modal, Alert, ActivityIndicator, Image, Pressable, Dimensions, Platform, Keyboard, Animated, RefreshControl, StatusBar } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -693,12 +693,24 @@ Made with ❤ by The Seeks Academy`;
   });
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top', 'left', 'right']}>
-      <View style={[styles.header, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={20} color={theme.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>Students</Text>
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: StatusBar.currentHeight || 0 }]}>
+      <View style={[styles.header, { backgroundColor: theme.primary, borderBottomColor: 'transparent' }]}>
+        <TouchableOpacity
+        style={{ 
+          width: scale(38), 
+          height: scale(38), 
+          borderRadius: scale(12), 
+          backgroundColor: 'rgba(255, 255, 255, 0.15)', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          marginRight: scale(12) 
+        }} 
+        activeOpacity={0.7}
+        onPress={() => navigation.goBack()}
+      >
+        <Ionicons name="arrow-back" size={scale(22)} color="#ffffff" />
+      </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: '#fff' }]}>Students</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(4) }}>
           <TouchableOpacity onPress={handleCopyExistingCredentials} style={styles.addButton}>
             <Ionicons name="copy-outline" size={20} color={theme.primary} />
@@ -1466,7 +1478,7 @@ Made with ❤ by The Seeks Academy`;
           </View>
         </TouchableOpacity>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 };
 

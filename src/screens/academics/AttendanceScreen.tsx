@@ -33,7 +33,7 @@ const STATUS_META: Record<StatusType, { label: string; color: string; icon: stri
 };
 
 interface StudentRow {
-  studentId: string; studentName: string; rollno: string; class: string; gender?: string;
+  studentId: string; studentName: string; fatherName: string; rollno: string; class: string; gender?: string;
 }
 
 /* ─────────────────── Helpers ─────────────────── */
@@ -152,7 +152,8 @@ export const AdminAttendanceScreen: React.FC = () => {
                             s.id;
         return {
           studentId:   resolvedUid,
-          studentName: s.fullname || (s as any).name || 'Unknown',
+          studentName: (s as any).name || s.fullname || 'Unknown',
+          fatherName:  s.fatherName || (s as any).fathername || 'Unknown',
           rollno:      s.rollno || 'N/A',
           class:       s.class  || (s as any).grade || 'N/A',
           gender:      s.gender || (s as any).gender || 'N/A',
@@ -332,7 +333,7 @@ export const AdminAttendanceScreen: React.FC = () => {
           </View>
           <View style={styles.info}>
             <Text style={[styles.name, { color: theme.text }]} numberOfLines={1}>{item.studentName}</Text>
-            <Text style={[styles.meta, { color: theme.textSecondary }]}>{item.rollno} · {item.class}</Text>
+            <Text style={[styles.meta, { color: theme.textSecondary }]} numberOfLines={1}>{item.fatherName}</Text>
           </View>
           <Ionicons name="time-outline" size={12} color={theme.textSecondary} style={{ marginRight: scale(6) }} />
         </TouchableOpacity>
@@ -565,29 +566,27 @@ export const AdminAttendanceScreen: React.FC = () => {
 
   /* ── Main Render ── */
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top']}>
-      <StatusBar backgroundColor={isDark ? '#1e293b' : '#4338ca'} barStyle="light-content" translucent={false} />
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: StatusBar.currentHeight || 0 }]}>
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: StatusBar.currentHeight || 0, backgroundColor: theme.primary, zIndex: 999 }} />
+      <StatusBar backgroundColor="transparent" barStyle="light-content" translucent={true} />
       <Animated.View style={{ opacity: fadeAnim }}>
         {/* Header */}
-        <LinearGradient
-          colors={isDark ? ['#1e293b','#0f172a'] : ['#4338ca','#6366f1']}
-          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.header}
-        >
+        <View style={[styles.header, { backgroundColor: theme.primary, borderBottomColor: 'transparent', borderBottomLeftRadius: scale(24), borderBottomRightRadius: scale(24) }]}>
           <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={18} color="#fff" />
+            <Ionicons name="arrow-back" size={18} color="#ffffff" />
           </TouchableOpacity>
           <View style={styles.headerText}>
             <Text style={styles.headerTitle}>Attendance Register{classFilter !== 'All' ? ` - ${classFilter}` : ''}</Text>
             <Text style={styles.headerSub}>{selectedDate || 'Select a date'}</Text>
           </View>
           {dbLoading
-            ? <ActivityIndicator color="#fff" size="small" style={{ marginRight: scale(4) }} />
+            ? <ActivityIndicator color="#ffffff" size="small" style={{ marginRight: scale(4) }} />
             : <View style={styles.pctBadge}>
                 <Text style={styles.pctNum}>{pct}%</Text>
                 <Text style={styles.pctLabel}>Present</Text>
               </View>
           }
-        </LinearGradient>
+        </View>
 
         {/* Week Nav */}
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: scale(12), paddingVertical: scale(8), backgroundColor: isDark ? theme.card : '#fff', borderBottomWidth: 1, borderColor: theme.border }}>
@@ -767,7 +766,7 @@ export const AdminAttendanceScreen: React.FC = () => {
       {renderHistory()}
       {renderMarkAll()}
       {renderMonthlyReport()}
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -802,7 +801,7 @@ function buildMonthlyStats(
 const styles = StyleSheet.create({
   container: { flex: 1 },
 
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(14), paddingVertical: scale(11) },
+  header: { marginTop: -1, flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(14), paddingVertical: scale(11), borderBottomLeftRadius: scale(24), borderBottomRightRadius: scale(24) },
   backBtn: { width: scale(32), height: scale(32), borderRadius: scale(8), backgroundColor: 'rgba(255,255,255,0.18)', justifyContent: 'center', alignItems: 'center' },
   headerText:  { flex: 1, marginLeft: scale(10) },
   headerTitle: { fontSize: scale(15), fontWeight: '700', color: '#fff', letterSpacing: -0.2 },

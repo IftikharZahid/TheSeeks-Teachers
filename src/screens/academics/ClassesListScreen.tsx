@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -70,14 +70,31 @@ export const ClassesListScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top', 'left', 'right']}>
+    <View style={[styles.container, { backgroundColor: isDark ? theme.background : '#f8fafc', paddingTop: StatusBar.currentHeight || 0 }]}>
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: StatusBar.currentHeight || 0, backgroundColor: theme.primary, zIndex: 999 }} />
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent={true} />
       {/* Header */}
-      <View style={[styles.header, { borderBottomColor: theme.border }]}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={22} color={theme.text} />
+      <View style={[styles.header, { backgroundColor: theme.primary, borderBottomColor: 'transparent' }]}>
+        <TouchableOpacity
+          style={{ 
+            width: scale(38), 
+            height: scale(38), 
+            borderRadius: scale(12), 
+            backgroundColor: 'rgba(255, 255, 255, 0.15)', 
+            justifyContent: 'center', 
+            alignItems: 'center', 
+          }} 
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons name="arrow-back" size={scale(22)} color="#ffffff" />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>Manage Exams</Text>
-        <View style={{ width: scale(30) }} />
+        
+        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name="document-text" size={scale(20)} color="#ffffff" style={{ marginRight: scale(6) }} />
+          <Text style={[styles.headerTitle, { color: '#ffffff' }]}>Manage Exams</Text>
+        </View>
+
+        <View style={{ width: scale(38) }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -114,8 +131,8 @@ export const ClassesListScreen: React.FC = () => {
             );
           })}
         </View>
-      </ScrollView>
-    </SafeAreaView>
+        </ScrollView>
+      </View>
   );
 };
 
@@ -124,12 +141,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
+    
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: scale(16),
     paddingVertical: scale(12),
     borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomLeftRadius: scale(24),
+    borderBottomRightRadius: scale(24),
   },
   backBtn: {
     padding: scale(4),

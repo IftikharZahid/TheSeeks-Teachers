@@ -16,6 +16,12 @@
     },
     "android": {
       "package": "com.theseeksacademy.teachers",
+      "splash": {
+        "image": "./assets/splash-icon.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#ffffff",
+        "imageWidth": 250
+      },
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"

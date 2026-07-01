@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Dimensions, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Dimensions, ActivityIndicator, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -134,15 +134,26 @@ export const LikedTeachersScreen: React.FC = () => {
     );
 
     return (
-        <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top', 'bottom', 'left', 'right']}>
+        <View style={[styles.container, { backgroundColor: theme.background, paddingTop: StatusBar.currentHeight || 0 }]}>
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: StatusBar.currentHeight || 0, backgroundColor: theme.primary, zIndex: 999 }} />
+      <StatusBar barStyle="light-content" backgroundColor={isDark ? theme.card : theme.primary} translucent={false} />
             {/* Floating Back Button */}
             <View style={styles.floatingHeader}>
                 <TouchableOpacity
-                    onPress={() => navigation.goBack()}
-                    style={[styles.floatingBackButton, { backgroundColor: theme.card }]}
-                >
-                    <Ionicons name="arrow-back" size={scale(22)} color={theme.text} />
-                </TouchableOpacity>
+        style={{ 
+          width: scale(38), 
+          height: scale(38), 
+          borderRadius: scale(12), 
+          backgroundColor: 'rgba(255, 255, 255, 0.15)', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          marginRight: scale(12) 
+        }} 
+        activeOpacity={0.7}
+        onPress={() => navigation.goBack()}
+      >
+        <Ionicons name="arrow-back" size={scale(22)} color="#ffffff" />
+      </TouchableOpacity>
                 <Text style={[styles.screenTitle, { color: theme.text }]}>Favorite Teachers</Text>
                 <View style={styles.placeholderButton} />
             </View>
@@ -183,13 +194,14 @@ export const LikedTeachersScreen: React.FC = () => {
                     </View>
                 </ScrollView>
             )}
-        </SafeAreaView>
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+    paddingTop: StatusBar.currentHeight || 0,
     },
     floatingHeader: {
         flexDirection: 'row',

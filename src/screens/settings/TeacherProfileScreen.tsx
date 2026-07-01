@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert, Modal, StatusBar } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
@@ -14,6 +14,7 @@ export const ProfileScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const [logoutModalVisible, setLogoutModalVisible] = React.useState(false);
   const { theme, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   
   const profileData = useAppSelector((s: any) => s.auth.profile);
   const user = useAppSelector((s: any) => s.auth.user);
@@ -44,22 +45,48 @@ export const ProfileScreen: React.FC = () => {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: StatusBar.currentHeight || 0 }]}>
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: StatusBar.currentHeight || 0, backgroundColor: theme.primary, zIndex: 999 }} />
+      <StatusBar barStyle="light-content" backgroundColor={isDark ? theme.card : theme.primary} translucent={false} />
+      
+      {/* Fixed Header (Transparent, Absolute) */}
+      <View style={[styles.header, { 
+        position: 'absolute', 
+        top: StatusBar.currentHeight || 0, 
+        left: 0, 
+        right: 0, 
+        backgroundColor: 'transparent', 
+        borderBottomColor: 'transparent', 
+        paddingTop: scale(10),
+        paddingBottom: scale(10),
+        paddingHorizontal: scale(10), 
+        zIndex: 100 
+      }]}>
+        <TouchableOpacity
+        style={{ 
+          width: scale(38), 
+          height: scale(38), 
+          borderRadius: scale(12), 
+          backgroundColor: 'rgba(255, 255, 255, 0.15)', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          marginRight: scale(12) 
+        }} 
+        activeOpacity={0.7}
+        onPress={() => navigation.goBack()}
+      >
+        <Ionicons name="arrow-back" size={scale(22)} color="#ffffff" />
+      </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: '#fff' }]}>My Profile</Text>
+        <TouchableOpacity style={[styles.backButton, { backgroundColor: 'rgba(255,255,255,0.2)' }]} onPress={() => setLogoutModalVisible(true)}>
+          <Ionicons name="log-out-outline" size={scale(20)} color="#fff" />
+        </TouchableOpacity>
+      </View>
+
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Profile Card & Header */}
-        <TeacherProfileBanner>
-          <View style={[styles.header, { borderBottomColor: 'transparent', paddingTop: scale(10) }]}>
-            <TouchableOpacity style={[styles.backButton, { backgroundColor: 'rgba(255,255,255,0.2)' }]} onPress={() => navigation.goBack()}>
-              <Ionicons name="arrow-back" size={scale(20)} color="#fff" />
-            </TouchableOpacity>
-            <Text style={[styles.headerTitle, { color: '#fff' }]}>My Profile</Text>
-            <TouchableOpacity style={[styles.backButton, { backgroundColor: 'rgba(255,255,255,0.2)' }]} onPress={() => setLogoutModalVisible(true)}>
-              <Ionicons name="log-out-outline" size={scale(20)} color="#fff" />
-            </TouchableOpacity>
-          </View>
-        </TeacherProfileBanner>
-        <View style={styles.avatarSection}>
+        <TeacherProfileBanner />
+          <View style={styles.avatarSection}>
           <View style={[styles.avatarContainer, { borderColor: theme.background }]}>
             <Image
               source={displayImage ? { uri: displayImage } : require('../../../assets/icon.png')}
@@ -144,7 +171,7 @@ const InfoRow = ({ icon, iconColor, label, value, theme }: any) => (
 );
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, paddingTop: StatusBar.currentHeight || 0 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

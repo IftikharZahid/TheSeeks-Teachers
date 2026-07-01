@@ -41,7 +41,11 @@ import { GenericExamsScreen } from "../screens/exams/GenericExamsScreen";
 
 import { MessagesScreen } from "../screens/communication/TeacherMessagesScreen";
 import { TeacherSuggestionsScreen } from "../screens/communication/TeacherSuggestionsScreen";
-import { LibraryScreen } from "../screens/academics/LibraryScreen";
+import { LibraryScreen } from "../screens/academics/TeacherLibraryScreen";
+import { DocumentsScreen } from "../screens/academics/DocumentsScreen";
+import { VideoGalleriesScreen } from "../screens/academics/VideoGalleriesScreen";
+import { PastPapersScreen } from "../screens/academics/PastPapersScreen";
+import { VideoLecturesScreen } from "../screens/academics/VideoLecturesScreen";
 import { TeachersScreen } from "../screens/users/TeachersListScreen";
 import { LikedTeachersScreen } from "../screens/users/LikedTeachersScreen";
 import { StaffInfoScreen } from "../screens/users/TeacherDetailsScreen";
@@ -79,6 +83,10 @@ export type RootStackParamList = {
   MessagesScreen: undefined;
   TeacherSuggestionsScreen: undefined;
   LibraryScreen: undefined;
+  DocumentsScreen: undefined;
+  VideoGalleriesScreen: undefined;
+  PastPapersScreen: undefined;
+  VideoLecturesScreen: { galleryId?: string; galleryName?: string; galleryColor?: string; videos?: any[]; initialVideoId?: string };
   TeachersScreen: undefined;
   LikedTeachersScreen: undefined;
   StaffInfoScreen: { teacher: any };
@@ -170,6 +178,10 @@ export const AppNavigator: React.FC = () => {
               <Stack.Screen name="MessagesScreen" component={MessagesScreen} />
               <Stack.Screen name="TeacherSuggestionsScreen" component={TeacherSuggestionsScreen} />
               <Stack.Screen name="LibraryScreen" component={LibraryScreen} />
+              <Stack.Screen name="DocumentsScreen" component={DocumentsScreen} />
+              <Stack.Screen name="VideoGalleriesScreen" component={VideoGalleriesScreen} />
+              <Stack.Screen name="PastPapersScreen" component={PastPapersScreen} />
+              <Stack.Screen name="VideoLecturesScreen" component={VideoLecturesScreen} />
               <Stack.Screen name="TeachersScreen" component={TeachersScreen} />
               <Stack.Screen name="LikedTeachersScreen" component={LikedTeachersScreen} />
               <Stack.Screen name="StaffInfoScreen" component={StaffInfoScreen} />

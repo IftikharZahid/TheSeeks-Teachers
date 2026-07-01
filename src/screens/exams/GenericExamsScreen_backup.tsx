@@ -1,6 +1,6 @@
 import { scale } from '../../utils/responsive';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, FlatList, TouchableOpacity, Pressable, TextInput, Modal, Alert, ActivityIndicator, Platform , StatusBar} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, FlatList, TouchableOpacity, Pressable, TextInput, Modal, Alert, ActivityIndicator, Platform, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
@@ -1262,13 +1262,25 @@ export const GenericExamsScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['top', 'left', 'right']}>
-      {/* ΓöÇΓöÇ Header ΓöÇΓöÇ */}
-      <View style={[styles.header, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.headerIconButton, { backgroundColor: theme.background, borderColor: theme.border }]}>
-          <Ionicons name="chevron-back" size={22} color={theme.text} />
-        </TouchableOpacity>
+      {/*  */}
+      <View style={[styles.header, { backgroundColor: theme.primary, borderBottomColor: 'transparent' }]}>
+        <TouchableOpacity
+        style={{ 
+          width: scale(38), 
+          height: scale(38), 
+          borderRadius: scale(12), 
+          backgroundColor: 'rgba(255, 255, 255, 0.15)', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          marginRight: scale(12) 
+        }} 
+        activeOpacity={0.7}
+        onPress={() => navigation.goBack()}
+      >
+        <Ionicons name="arrow-back" size={scale(22)} color="#ffffff" />
+      </TouchableOpacity>
         <View style={styles.headerTitleBlock}>
-          <Text style={[styles.headerTitle, { color: theme.text }]}>{targetClass} Exams</Text>
+          <Text style={[styles.headerTitle, { color: '#fff' }]}>{targetClass} Exams</Text>
           <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Results, marks, and student progress</Text>
         </View>
         <TouchableOpacity onPress={() => openModal()} style={[styles.headerPrimaryButton, { backgroundColor: theme.primary }]}>
@@ -1510,7 +1522,7 @@ export const GenericExamsScreen: React.FC = () => {
             {/* Header */}
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: scale(16), paddingVertical: scale(14), borderBottomWidth: 1, borderBottomColor: theme.border, backgroundColor: theme.card }}>
               <View>
-                <Text style={{ fontSize: scale(16), fontWeight: '800', color: theme.text }}>{editingExam ? 'Edit Record' : 'New Record'}</Text>
+                <Text style={{ fontSize: scale(17), fontWeight: '800', color: '#fff', flex: 1 }}>{editingExam ? 'Edit Record' : 'New Record'}</Text>
                 <Text style={{ fontSize: scale(11), color: theme.textSecondary, marginTop: scale(1) }}>{editingExam ? 'Update exam details' : 'Enter student exam details'}</Text>
               </View>
               <View style={{ flexDirection: 'row', gap: scale(8) }}>
@@ -2337,7 +2349,7 @@ export const GenericExamsScreen: React.FC = () => {
                     </View>
                     <View style={{ flex: 1, backgroundColor: theme.background, borderRadius: scale(6), paddingVertical: scale(6), alignItems: 'center', borderWidth: 1, borderColor: theme.border }}>
                       <Text style={{ fontSize: scale(9), color: theme.textSecondary, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: scale(1) }}>Total</Text>
-                      <Text style={{ fontSize: scale(13), fontWeight: '800', color: theme.text }}>{displayTotal}</Text>
+                      <Text style={{ fontSize: scale(17), fontWeight: '800', color: '#fff', flex: 1 }}>{displayTotal}</Text>
                     </View>
                     <View style={{ flex: 1, backgroundColor: theme.primary + '08', borderRadius: scale(6), paddingVertical: scale(6), alignItems: 'center', borderWidth: 1, borderColor: theme.primary + '20' }}>
                       <Text style={{ fontSize: scale(9), color: theme.primary, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: scale(1) }}>Obtained</Text>
@@ -2346,7 +2358,7 @@ export const GenericExamsScreen: React.FC = () => {
                     </View>
                     <View style={{ flex: 1, backgroundColor: theme.background, borderRadius: scale(6), paddingVertical: scale(6), alignItems: 'center', borderWidth: 1, borderColor: theme.border }}>
                       <Text style={{ fontSize: scale(9), color: theme.textSecondary, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: scale(1) }}>Pos.</Text>
-                      <Text style={{ fontSize: scale(12), fontWeight: '800', color: theme.text }}>
+                      <Text style={{ fontSize: scale(17), fontWeight: '800', color: '#fff', flex: 1 }}>
                         {(() => {
                           if (!sel) return 'ΓÇö';
                           const sameGroup = exams.filter(e => e.title === sel.title && e.studentClass === sel.studentClass);
