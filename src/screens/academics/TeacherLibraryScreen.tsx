@@ -131,12 +131,10 @@ export const LibraryScreen: React.FC = () => {
   const palette = ['#8b5cf6', '#10b981', '#f59e0b', '#06b6d4', '#eab308', '#ec4899', '#6366f1', '#f43f5e', '#0ea5e9', '#22c55e'];
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: StatusBar.currentHeight || 0 }]}>
-      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: StatusBar.currentHeight || 0, backgroundColor: theme.primary, zIndex: 999 }} />
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent={true} />
-
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: theme.primary, borderBottomColor: 'transparent' }]}>
+      <View style={[styles.header, { marginTop: -1, paddingTop: (StatusBar.currentHeight || 0) + scale(12) + 1, backgroundColor: theme.primary, borderBottomColor: 'transparent' }]}>
+        <StatusBar barStyle="light-content" backgroundColor="transparent" translucent={true} />
         {!isSearching ? (
           <>
             <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
@@ -284,7 +282,7 @@ export const LibraryScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingTop: StatusBar.currentHeight || 0 },
+  container: { flex: 1 },
   header: { borderBottomLeftRadius: scale(24), borderBottomRightRadius: scale(24),
     flexDirection: 'row',
     alignItems: 'center',

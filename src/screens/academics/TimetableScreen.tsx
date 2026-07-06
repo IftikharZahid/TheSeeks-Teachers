@@ -112,18 +112,27 @@ export const AdminTimetableScreen: React.FC = () => {
   const [selectedDay, setSelectedDay] = useState<string>(todayName() === 'Sunday' ? 'Monday' : todayName());
   const [refreshing, setRefreshing] = useState(false);
 
-  const [currentTimeMinutes, setCurrentTimeMinutes] = useState(() => {
-    const now = new Date();
-    return now.getHours() * 60 + now.getMinutes();
-  });
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
+    // Check every second to ensure exact, zero-delay synchronization with mobile time
     const timer = setInterval(() => {
-      const now = new Date();
-      setCurrentTimeMinutes(now.getHours() * 60 + now.getMinutes());
-    }, 60000);
+      setCurrentTime(new Date());
+    }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  const currentTimeMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
+  const currentDayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][currentTime.getDay()];
+
+  // Auto-update selected day if day rolls over
+  const prevDayRef = useRef(currentDayName);
+  useEffect(() => {
+    if (prevDayRef.current !== currentDayName) {
+      if (currentDayName !== 'Sunday') setSelectedDay(currentDayName);
+      prevDayRef.current = currentDayName;
+    }
+  }, [currentDayName]);
 
   // Subscribe to timetable via Redux (real-time snapshot)
   useEffect(() => {
@@ -176,8 +185,33 @@ export const AdminTimetableScreen: React.FC = () => {
       });
   }, [allEntries, teacherNameStripped, selectedDay]);
 
-  const today = todayName();
+  const today = currentDayName;
   const loading = timetableStatus === 'loading';
+
+  // Find ongoing or next lecture index
+  const activeIndex = React.useMemo(() => {
+    if (selectedDay !== today) return -1;
+    
+    // 1. Find ongoing
+    for (let i = 0; i < filteredEntries.length; i++) {
+      const e = filteredEntries[i];
+      const start = parseTime(e.startTime || (e.time ? e.time.split('-')[0] : ''));
+      const end = parseTime(e.endTime || (e.time ? e.time.split('-')[1] : '')) || (start + 60);
+      if (start > 0 && currentTimeMinutes >= start && currentTimeMinutes <= end) {
+        return i;
+      }
+    }
+    
+    // 2. Find next
+    for (let i = 0; i < filteredEntries.length; i++) {
+      const e = filteredEntries[i];
+      const start = parseTime(e.startTime || (e.time ? e.time.split('-')[0] : ''));
+      if (start > currentTimeMinutes) {
+        return i;
+      }
+    }
+    return -1;
+  }, [filteredEntries, selectedDay, today, currentTimeMinutes]);
 
   // ──────────────────────────────────────────────
   // RENDER
@@ -284,9 +318,7 @@ export const AdminTimetableScreen: React.FC = () => {
 
           <View style={styles.listContainer}>
             {filteredEntries.map((e: any, index: number) => {
-              const start = parseTime(e.startTime || (e.time ? e.time.split('-')[0] : ''));
-              const end = parseTime(e.endTime || (e.time ? e.time.split('-')[1] : '')) || (start + 60);
-              const isActive = selectedDay === today && currentTimeMinutes >= start && currentTimeMinutes <= end;
+              const isActive = index === activeIndex;
               
               return (
                 <View key={e.id || index} style={{ flexDirection: 'row', alignItems: 'stretch' }}>

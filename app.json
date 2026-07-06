@@ -2,7 +2,7 @@
   "expo": {
     "name": "Teacher App",
     "slug": "teacher-app",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -16,6 +16,7 @@
     },
     "android": {
       "package": "com.theseeksacademy.teachers",
+      "versionCode": 2,
       "splash": {
         "image": "./assets/splash-icon.png",
         "resizeMode": "contain",

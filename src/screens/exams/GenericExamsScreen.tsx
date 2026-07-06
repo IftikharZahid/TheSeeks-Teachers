@@ -1346,11 +1346,10 @@ export const GenericExamsScreen: React.FC = () => {
     .filter(Boolean).length;
 
   return (
-    <View style={[styles.container, { backgroundColor: isDark ? theme.background : '#f8fafc', paddingTop: StatusBar.currentHeight || 0 }]}>
-        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: StatusBar.currentHeight || 0, backgroundColor: isDark ? theme.card : theme.primary, zIndex: 999 }} />
+    <View style={[styles.container, { backgroundColor: isDark ? theme.background : '#f8fafc' }]}>
         <StatusBar barStyle="light-content" backgroundColor="transparent" translucent={true} />
         {/* Header */}
-        <View style={[styles.header, { backgroundColor: isDark ? theme.card : theme.primary, borderBottomColor: isDark ? theme.border : 'transparent' }]}>
+        <View style={[styles.header, { paddingTop: (StatusBar.currentHeight || 0) + scale(8), backgroundColor: isDark ? theme.card : theme.primary, borderBottomColor: isDark ? theme.border : 'transparent' }]}>
           <TouchableOpacity
             style={{ width: scale(38), height: scale(38), borderRadius: scale(12), backgroundColor: isDark ? theme.border : 'rgba(255, 255, 255, 0.15)', justifyContent: 'center', alignItems: 'center', marginRight: scale(12) }} 
             onPress={() => navigation.goBack()}
@@ -1358,8 +1357,8 @@ export const GenericExamsScreen: React.FC = () => {
             <Ionicons name="arrow-back" size={scale(22)} color={isDark ? theme.text : '#ffffff'} />
           </TouchableOpacity>
           <View style={styles.headerTitleBlock}>
-            <Text style={[styles.headerTitle, { color: isDark ? theme.text : '#ffffff' }]} numberOfLines={1} adjustsFontSizeToFit>{targetClass} Exams</Text>
-            <Text style={[styles.headerSubtitle, { color: isDark ? theme.textSecondary : 'rgba(255,255,255,0.7)' }]} numberOfLines={1} adjustsFontSizeToFit>Results, marks, and student progress</Text>
+            <Text style={[styles.headerTitle, { color: isDark ? theme.text : '#ffffff' }]}>{targetClass} Exams</Text>
+            <Text style={[styles.headerSubtitle, { color: isDark ? theme.textSecondary : 'rgba(255,255,255,0.7)' }]}>Results, marks, and student progress</Text>
           </View>
           <TouchableOpacity onPress={() => openModal()} style={[styles.headerPrimaryButton, { backgroundColor: isDark ? theme.primary + '30' : 'rgba(255,255,255,0.2)' }]}>
             <Ionicons name="add" size={18} color={isDark ? theme.text : '#fff'} />
@@ -1595,10 +1594,9 @@ export const GenericExamsScreen: React.FC = () => {
           EDIT / ADD MODAL
       ══════════════════════════════════════════════════════════════════════ */}
       <Modal visible={modalVisible} animationType="slide" transparent={true} statusBarTranslucent={true} onRequestClose={() => { setModalVisible(false); resetForm(); }}>
-        <View style={{ flex: 1, backgroundColor: isDark ? theme.background : '#f8fafc', paddingTop: StatusBar.currentHeight || 0 }}>
-          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: StatusBar.currentHeight || 0, backgroundColor: isDark ? theme.card : theme.primary, zIndex: 999 }} />
+        <View style={{ flex: 1, backgroundColor: isDark ? theme.background : '#f8fafc' }}>
           {/* Header */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(16), paddingVertical: scale(12), backgroundColor: theme.primary }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(16), paddingTop: (StatusBar.currentHeight || 0) + scale(12), paddingBottom: scale(12), backgroundColor: theme.primary }}>
             <TouchableOpacity
               style={{ width: scale(38), height: scale(38), borderRadius: scale(12), backgroundColor: isDark ? theme.border : 'rgba(255, 255, 255, 0.15)', justifyContent: 'center', alignItems: 'center', marginRight: scale(12) }} 
               activeOpacity={0.7}
@@ -1677,7 +1675,7 @@ export const GenericExamsScreen: React.FC = () => {
                   <View style={[styles.row, { zIndex: 2000 }]}>
 
                     {/* Search Student */}
-                    <View style={[styles.col, { flex: 0.65, zIndex: 1000 }]}>
+                    <View style={[styles.col, { flex: 0.5, zIndex: 1000 }]}>
                       <Text style={[styles.label, { color: theme.text }]}>Search Student</Text>
                       <View style={[styles.selectInput, { backgroundColor: theme.card, borderColor: theme.border }]}>
                         <Ionicons name="search" size={14} color={theme.textSecondary} style={{ marginRight: scale(6) }} />
@@ -1709,7 +1707,7 @@ export const GenericExamsScreen: React.FC = () => {
                     </View>
 
                     {isTeacher && (
-                      <View style={[styles.col, { flex: 0.35, zIndex: 2000 }]}>
+                      <View style={[styles.col, { flex: 0.5, zIndex: 2000 }]}>
 
                     <Text style={[styles.label, { color: theme.text }]}>Subject</Text>
                     <View style={{ position: 'relative', zIndex: 1400 }}>
@@ -1727,7 +1725,7 @@ export const GenericExamsScreen: React.FC = () => {
                         disabled={teacherSubjectsList.length <= 1}
                       >
                         <Ionicons name="book-outline" size={14} color={theme.textSecondary} style={{ marginRight: scale(6) }} />
-                        <Text style={{ color: selectedTeacherSubject ? theme.text : theme.textSecondary, fontSize: scale(13), flex: 1 }}>
+                        <Text style={{ color: selectedTeacherSubject ? theme.text : theme.textSecondary, fontSize: scale(13), flex: 1 }} numberOfLines={1}>
                           {selectedTeacherSubject || 'Select Subject'}
                         </Text>
                         {teacherSubjectsList.length > 1 && (
@@ -1981,11 +1979,11 @@ export const GenericExamsScreen: React.FC = () => {
                   <Text style={[styles.label, { color: theme.text }]}>Date</Text>
                   <TouchableOpacity
                     onPress={() => setShowDatePicker(true)}
-                    style={[styles.selectInput, { backgroundColor: theme.card, borderColor: theme.border, marginBottom: 0, paddingHorizontal: scale(4) }]}
+                    style={[styles.selectInput, { backgroundColor: theme.card, borderColor: theme.border, marginBottom: 0, paddingHorizontal: scale(8) }]}
                   >
                     <Ionicons name="calendar-outline" size={12} color={theme.textSecondary} style={{ marginRight: scale(2) }} />
-                    <Text style={{ color: theme.text, fontSize: scale(10), flex: 1 }} numberOfLines={1} adjustsFontSizeToFit>
-                      {date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })}
+                    <Text style={{ color: theme.text, fontSize: scale(11), flex: 1 }} numberOfLines={1}>
+                      {date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -2418,12 +2416,7 @@ export const GenericExamsScreen: React.FC = () => {
                 return k === studentKey && (e.studentClass || '') === studentClass;
               });
               const existingTitles = new Set(studentExams.map(e => e.title));
-              const existingTNumbers = studentExams
-                .map(e => { const match = e.title.match(/^T(\d+)$/); return match ? parseInt(match[1], 10) : 0; })
-                .filter(n => n > 0);
-              const maxExisting = existingTNumbers.length > 0 ? Math.max(...existingTNumbers) : 0;
-              const showUpTo = Math.max(maxExisting + 1, 3);
-              const visibleTitles = TITLE_OPTIONS.slice(0, Math.min(showUpTo, TITLE_OPTIONS.length));
+              const visibleTitles = dynamicTitleOptions;
 
               return (
                 <View style={{ marginBottom: scale(12) }}>

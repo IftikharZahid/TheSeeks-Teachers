@@ -154,10 +154,9 @@ export const TeacherAssignmentsScreen: React.FC = () => {
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: StatusBar.currentHeight || 0 }]}>
-      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: StatusBar.currentHeight || 0, backgroundColor: theme.primary, zIndex: 999 }} />
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent={true} />
-      <View style={[styles.header, { backgroundColor: theme.primary, borderBottomColor: 'transparent' }]}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <View style={[styles.header, { marginTop: -1, paddingTop: (StatusBar.currentHeight || 0) + scale(12) + 1, backgroundColor: theme.primary, borderBottomColor: 'transparent' }]}>
+        <StatusBar barStyle="light-content" backgroundColor="transparent" translucent={true} />
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
           <Ionicons name="arrow-back" size={scale(22)} color="#ffffff" />
         </TouchableOpacity>

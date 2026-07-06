@@ -70,11 +70,10 @@ export const ClassesListScreen: React.FC = () => {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: isDark ? theme.background : '#f8fafc', paddingTop: StatusBar.currentHeight || 0 }]}>
-      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: StatusBar.currentHeight || 0, backgroundColor: theme.primary, zIndex: 999 }} />
+    <View style={[styles.container, { backgroundColor: isDark ? theme.background : '#f8fafc' }]}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent={true} />
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: theme.primary, borderBottomColor: 'transparent' }]}>
+      <View style={[styles.header, { paddingTop: (StatusBar.currentHeight || 0) + scale(12), backgroundColor: theme.primary, borderBottomColor: 'transparent' }]}>
         <TouchableOpacity
           style={{ 
             width: scale(38), 

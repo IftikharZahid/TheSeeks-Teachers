@@ -58,11 +58,10 @@ export const AttendanceClassesListScreen: React.FC = () => {
   });
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background, paddingTop: StatusBar.currentHeight || 0 }]}>
-      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: StatusBar.currentHeight || 0, backgroundColor: theme.primary, zIndex: 999 }} />
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <StatusBar backgroundColor="transparent" barStyle="light-content" translucent={true} />
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: theme.primary, borderBottomColor: 'transparent' }]}>
+      <View style={[styles.header, { paddingTop: (StatusBar.currentHeight || 0) + scale(12), backgroundColor: theme.primary, borderBottomColor: 'transparent' }]}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={22} color="#ffffff" />
         </TouchableOpacity>

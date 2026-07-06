@@ -376,17 +376,18 @@ export const VideoLecturesScreen: React.FC = () => {
         : [`${galleryColor}20`, `${galleryColor}05`];
 
     return (
-        <View style={[styles.container, { backgroundColor: theme.background, paddingTop: StatusBar.currentHeight || 0 }]}>
-            <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: StatusBar.currentHeight || 0, backgroundColor: theme.primary, zIndex: 999 }} />
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent={true} />
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
             {/* Header */}
             <View style={[
                 styles.header,
                 {
+                    marginTop: -1,
+                    paddingTop: (StatusBar.currentHeight || 0) + scale(10) + 1,
                     backgroundColor: theme.primary,
                     borderBottomColor: 'transparent'
                 }
             ]}>
+                <StatusBar barStyle="light-content" backgroundColor="transparent" translucent={true} />
                 <TouchableOpacity
         style={{ 
           width: scale(38), 
@@ -717,7 +718,6 @@ export const VideoLecturesScreen: React.FC = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        paddingTop: StatusBar.currentHeight || 0,
     },
     header: { borderBottomLeftRadius: scale(24), borderBottomRightRadius: scale(24),
         flexDirection: 'row',

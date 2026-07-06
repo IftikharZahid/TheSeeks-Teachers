@@ -64,6 +64,24 @@ const quickActions = [
 
 const selectTeacherTimetable = (state: RootState) => state.admin.timetable;
 
+const parseTime = (timeStr?: string) => {
+  if (!timeStr) return 0;
+  let match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  if (match) {
+    let hours = parseInt(match[1], 10);
+    const minutes = parseInt(match[2], 10);
+    const modifier = match[3].toUpperCase();
+    if (modifier === 'PM' && hours < 12) hours += 12;
+    if (modifier === 'AM' && hours === 12) hours = 0;
+    return hours * 60 + minutes;
+  }
+  match = timeStr.trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (match) {
+    return parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
+  }
+  return 0;
+};
+
 const BlinkingNotification: React.FC<{
   subject: string;
   clsName: string;
@@ -72,90 +90,123 @@ const BlinkingNotification: React.FC<{
   isDark: boolean;
   theme: any;
 }> = ({ subject, clsName, sectionInfo, displayTime, isDark, theme }) => {
-  const opacity = useRef(new Animated.Value(0.1)).current;
+  const pulseAnim = useRef(new Animated.Value(0)).current;
   const spinAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Pulse animation for the active dot
+    // Pulse animation for the inner LIVE dot
     Animated.loop(
       Animated.sequence([
-        Animated.timing(opacity, { toValue: 1, duration: 400, useNativeDriver: true }),
-        Animated.timing(opacity, { toValue: 0.1, duration: 400, useNativeDriver: true })
+        Animated.timing(pulseAnim, { toValue: 1, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 0, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true })
       ])
     ).start();
 
-    // Continuous spin animation for the spark line
+    // Fast sparking rotation for the outer border
     Animated.loop(
       Animated.timing(spinAnim, {
         toValue: 1,
-        duration: 2500,
+        duration: 2000,
         easing: Easing.linear,
         useNativeDriver: true
       })
     ).start();
-  }, [opacity, spinAnim]);
+  }, [pulseAnim, spinAnim]);
 
   const spin = spinAnim.interpolate({
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg']
   });
 
+  const dotOpacity = pulseAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.2, 1]
+  });
+
   return (
-    <View style={{ marginHorizontal: scale(16), marginTop: scale(10) }}>
+    <View style={{ marginHorizontal: scale(16), marginTop: scale(10), position: 'relative' }}>
+      
+      {/* Outer Container with padding to form the sparking border */}
       <View style={{
         borderRadius: scale(50),
         overflow: 'hidden',
-        padding: 2, // Width of the spark line
-        position: 'relative'
+        padding: scale(2), // Thickness of the sparking line
+        backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+        shadowColor: '#ef4444',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.3,
+        shadowRadius: 6,
+        elevation: 4
       }}>
-        {/* Spinning Gradient Background (Spark Line) */}
+        {/* Spinning Sparking Gradient */}
         <Animated.View
           style={{
             position: 'absolute',
-            top: '-50%',
-            left: '-50%',
-            right: '-50%',
-            bottom: '-50%',
+            top: '-50%', left: '-50%', right: '-50%', bottom: '-50%',
             transform: [{ rotate: spin }],
             alignItems: 'center',
             justifyContent: 'center'
           }}
         >
           <LinearGradient
-            colors={['#ef4444', 'transparent', 'transparent']}
+            colors={['#ef4444', '#fbbf24', 'transparent', 'transparent']} // Red and Amber for sparking effect
             style={{ width: '100%', height: '100%' }}
             start={{ x: 0.5, y: 0 }}
             end={{ x: 0.5, y: 1 }}
           />
         </Animated.View>
 
-        {/* Inner Content Component */}
+        {/* Inner Content (Compact & Professional) */}
         <View style={{
-          backgroundColor: isDark ? '#1e293b' : '#f0fdfa',
+          backgroundColor: isDark ? '#1e293b' : '#ffffff',
           borderRadius: scale(50),
           paddingVertical: scale(8),
-          paddingHorizontal: scale(14),
+          paddingHorizontal: scale(12),
           flexDirection: 'row',
           alignItems: 'center',
         }}>
-          <Animated.View style={{ opacity, flexDirection: 'row', alignItems: 'center', marginRight: scale(6) }}>
-            <View style={{ width: scale(6), height: scale(6), borderRadius: scale(3), backgroundColor: '#ef4444', marginRight: scale(4) }} />
-            <Text style={{ fontSize: scale(9), color: isDark ? '#ef4444' : '#ef4444', fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.5 }}>Active</Text>
-          </Animated.View>
+          {/* Live Badge */}
+          <View style={{
+            backgroundColor: isDark ? 'rgba(239,68,68,0.15)' : '#fee2e2',
+            paddingHorizontal: scale(8),
+            paddingVertical: scale(3),
+            borderRadius: scale(50),
+            flexDirection: 'row',
+            alignItems: 'center',
+            marginRight: scale(8),
+          }}>
+            <Animated.View style={{ 
+              width: scale(5), 
+              height: scale(5), 
+              borderRadius: scale(2.5), 
+              backgroundColor: '#ef4444', 
+              marginRight: scale(4),
+              opacity: dotOpacity
+            }} />
+            <Text style={{ fontSize: scale(9), color: '#ef4444', fontWeight: '800', letterSpacing: 0.5 }}>LIVE</Text>
+          </View>
+          
+          {/* Class Info */}
           <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-            <Text style={{ fontSize: scale(12), color: theme.text, fontWeight: '700', flex: 1 }} numberOfLines={1}>
-              {subject} <Text style={{ fontWeight: '500', color: theme.textTertiary, fontSize: scale(10) }}>| {clsName}</Text>
+            <Text style={{ fontSize: scale(12), color: theme.text, fontWeight: '700', flexShrink: 1 }} numberOfLines={1}>
+              {subject}
             </Text>
+            {!!clsName && (
+              <Text style={{ fontSize: scale(10), color: theme.textSecondary, fontWeight: '600', marginLeft: scale(4), flexShrink: 0 }}>
+                • {clsName}
+              </Text>
+            )}
           </View>
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(6) }}>
+          {/* Tags */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(4), marginLeft: scale(6) }}>
             {!!sectionInfo && (
-              <View style={{ backgroundColor: isDark ? 'rgba(2,132,199,0.3)' : '#bae6fd', paddingHorizontal: scale(6), paddingVertical: scale(2), borderRadius: scale(50) }}>
-                <Text style={{ fontSize: scale(9), color: isDark ? '#bae6fd' : '#0369a1', fontWeight: '700' }}>{sectionInfo}</Text>
+              <View style={{ backgroundColor: isDark ? 'rgba(56,189,248,0.1)' : '#f0f9ff', paddingHorizontal: scale(6), paddingVertical: scale(2), borderRadius: scale(50) }}>
+                <Text style={{ fontSize: scale(9), color: isDark ? '#38bdf8' : '#0284c7', fontWeight: '600' }}>{sectionInfo}</Text>
               </View>
             )}
-            <View style={{ backgroundColor: isDark ? 'rgba(14,165,233,0.15)' : '#e0f2fe', paddingHorizontal: scale(8), paddingVertical: scale(2), borderRadius: scale(50) }}>
-              <Text style={{ fontSize: scale(10), color: isDark ? '#7dd3fc' : '#0284c7', fontWeight: '800' }}>{displayTime}</Text>
+            <View style={{ backgroundColor: isDark ? 'rgba(148,163,184,0.1)' : '#f1f5f9', paddingHorizontal: scale(6), paddingVertical: scale(2), borderRadius: scale(50) }}>
+              <Text style={{ fontSize: scale(10), color: isDark ? '#94a3b8' : '#475569', fontWeight: '700' }}>{displayTime}</Text>
             </View>
           </View>
         </View>
@@ -178,6 +229,16 @@ export const TeacherDashboardScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const unsubsRef = useRef<(() => void)[]>([]);
   const [showSideMenu, setShowSideMenu] = useState(false);
+  
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    // Check every second to ensure exact, zero-delay synchronization with mobile time
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -258,9 +319,10 @@ export const TeacherDashboardScreen: React.FC = () => {
   }, [timetableData, profileData?.fullname, user?.displayName]);
 
   // Today's schedule calculation
+  const currentDay = currentTime.getDay();
   const todaysSchedule = React.useMemo(() => {
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const todayStr = days[new Date().getDay()];
+    const todayStr = days[currentDay];
     const teacherName = (profileData?.fullname || user?.displayName || '').trim().toLowerCase();
 
     if (!teacherName || !timetableData[todayStr]) return [];
@@ -287,10 +349,12 @@ export const TeacherDashboardScreen: React.FC = () => {
       return true;
     })
       .sort((a, b) => {
-        // Simple string compare of start time assuming HH:MM format
-        return (a.time || '').localeCompare(b.time || '');
+        // Sort by start time minutes
+        const aStart = (a as any).startTime || (a.time && a.time.includes('-') ? a.time.split('-')[0] : a.time);
+        const bStart = (b as any).startTime || (b.time && b.time.includes('-') ? b.time.split('-')[0] : b.time);
+        return parseTime(aStart) - parseTime(bStart);
       });
-  }, [timetableData, profileData?.fullname, user?.displayName]);
+  }, [timetableData, profileData?.fullname, user?.displayName, currentDay]);
 
   const unreadNotices = useAppSelector(selectUnreadNotices);
   const totalLibraryItems = useAppSelector((state: RootState) => state.notifications.notices.length);
@@ -498,7 +562,7 @@ export const TeacherDashboardScreen: React.FC = () => {
               {/* Drawer panel */}
               <View style={{
                 position: 'absolute', top: 0, bottom: 0, left: 0,
-                width: scale(252),
+                width: Math.min(width * 0.65, scale(220)), // Compact width similar to design
                 backgroundColor: theme.card,
                 borderTopRightRadius: scale(20),
                 borderBottomRightRadius: scale(20),
@@ -645,7 +709,7 @@ export const TeacherDashboardScreen: React.FC = () => {
                   </ScrollView>
 
                   {/* ── Logout footer ── */}
-                  <View style={{ paddingHorizontal: scale(14), paddingVertical: scale(12), borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.border }}>
+                  <View style={{ paddingHorizontal: scale(14), paddingVertical: scale(10), borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.border }}>
                     <TouchableOpacity
                       style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? '#ef444415' : '#fef2f2', borderRadius: scale(10), paddingVertical: scale(11), paddingHorizontal: scale(14), borderWidth: 1, borderColor: '#ef444430' }}
                       activeOpacity={0.75}
@@ -743,28 +807,34 @@ export const TeacherDashboardScreen: React.FC = () => {
           {/* Active Lecture Notification */}
           {(() => {
             if (todaysSchedule.length === 0) return null;
-            const now = new Date();
-            const currentMinutes = now.getHours() * 60 + now.getMinutes();
+            const currentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
             let activeIndex = -1;
+            
             for (let i = 0; i < todaysSchedule.length; i++) {
               const session = todaysSchedule[i];
               let start = (session as any).startTime || (session.time && session.time.includes('-') ? session.time.split('-')[0] : session.time);
               let end = (session as any).endTime || (session.time && session.time.includes('-') ? session.time.split('-')[1] : null);
-              if (start && end) {
-                const startParts = start.trim().split(':');
-                const endParts = end.trim().split(':');
-                if (startParts.length >= 2 && endParts.length >= 2) {
-                  const startH = parseInt(startParts[0], 10);
-                  const startM = parseInt(startParts[1], 10);
-                  const endH = parseInt(endParts[0], 10);
-                  const endM = parseInt(endParts[1], 10);
-                  if (!isNaN(startH) && !isNaN(startM) && !isNaN(endH) && !isNaN(endM)) {
-                    const startTotal = startH * 60 + startM;
-                    const endTotal = endH * 60 + endM;
-                    if (currentMinutes >= startTotal && currentMinutes <= endTotal) {
-                      activeIndex = i;
-                      break;
-                    }
+              
+              if (start) {
+                const startTotal = parseTime(start);
+                const endTotal = end ? parseTime(end) : startTotal + 60;
+                if (startTotal > 0 && currentMinutes >= startTotal && currentMinutes <= endTotal) {
+                  activeIndex = i;
+                  break;
+                }
+              }
+            }
+            
+            // If no active, find next
+            if (activeIndex === -1) {
+              for (let i = 0; i < todaysSchedule.length; i++) {
+                const session = todaysSchedule[i];
+                let start = (session as any).startTime || (session.time && session.time.includes('-') ? session.time.split('-')[0] : session.time);
+                if (start) {
+                  const startTotal = parseTime(start);
+                  if (startTotal > currentMinutes) {
+                    activeIndex = i;
+                    break;
                   }
                 }
               }
@@ -805,7 +875,10 @@ export const TeacherDashboardScreen: React.FC = () => {
               // Default fallback if still nothing
               if (!sectionInfo) sectionInfo = 'General';
 
-              return <BlinkingNotification subject={subjectName} clsName={clsName.replace(/boys|girls/i, '').trim()} sectionInfo={sectionInfo} displayTime={displayTime} isDark={isDark} theme={theme} />;
+              let displayClassName = clsName.replace(/boys|girls/i, '').trim();
+              if (!displayClassName) displayClassName = clsName;
+
+              return <BlinkingNotification subject={subjectName} clsName={displayClassName} sectionInfo={sectionInfo} displayTime={displayTime} isDark={isDark} theme={theme} />;
             }
             return null;
           })()}
@@ -1012,28 +1085,33 @@ export const TeacherDashboardScreen: React.FC = () => {
                 <Text style={{ color: theme.textSecondary, marginTop: scale(12), fontSize: scale(14), fontWeight: '500' }}>No classes scheduled for today.</Text>
               </View>
             ) : (() => {
-              const now = new Date();
-              const currentMinutes = now.getHours() * 60 + now.getMinutes();
+              const currentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
               let activeIndex = -1;
               for (let i = 0; i < todaysSchedule.length; i++) {
                 const session = todaysSchedule[i];
                 let start = (session as any).startTime || (session.time && session.time.includes('-') ? session.time.split('-')[0] : session.time);
                 let end = (session as any).endTime || (session.time && session.time.includes('-') ? session.time.split('-')[1] : null);
-                if (start && end) {
-                  const startParts = start.trim().split(':');
-                  const endParts = end.trim().split(':');
-                  if (startParts.length >= 2 && endParts.length >= 2) {
-                    const startH = parseInt(startParts[0], 10);
-                    const startM = parseInt(startParts[1], 10);
-                    const endH = parseInt(endParts[0], 10);
-                    const endM = parseInt(endParts[1], 10);
-                    if (!isNaN(startH) && !isNaN(startM) && !isNaN(endH) && !isNaN(endM)) {
-                      const startTotal = startH * 60 + startM;
-                      const endTotal = endH * 60 + endM;
-                      if (currentMinutes >= startTotal && currentMinutes <= endTotal) {
-                        activeIndex = i;
-                        break;
-                      }
+                
+                if (start) {
+                  const startTotal = parseTime(start);
+                  const endTotal = end ? parseTime(end) : startTotal + 60;
+                  if (startTotal > 0 && currentMinutes >= startTotal && currentMinutes <= endTotal) {
+                    activeIndex = i;
+                    break;
+                  }
+                }
+              }
+              
+              // If no active, find next
+              if (activeIndex === -1) {
+                for (let i = 0; i < todaysSchedule.length; i++) {
+                  const session = todaysSchedule[i];
+                  let start = (session as any).startTime || (session.time && session.time.includes('-') ? session.time.split('-')[0] : session.time);
+                  if (start) {
+                    const startTotal = parseTime(start);
+                    if (startTotal > currentMinutes) {
+                      activeIndex = i;
+                      break;
                     }
                   }
                 }

@@ -13,7 +13,7 @@ export const AboutScreen: React.FC = () => {
   const socialLinks = [
     { key: 'github', icon: 'logo-github', label: 'GitHub', color: isDark ? '#e2e8f0' : '#24292e', url: 'https://github.com/iftikharzahid' },
     { key: 'linkedin', icon: 'logo-linkedin', label: 'LinkedIn', color: '#0A66C2', url: 'https://linkedin.com/in/iftikharzahid' },
-    { key: 'globe', icon: 'globe-outline', label: 'Portfolio', color: theme.primary, url: 'https://zahid.codes' },
+    { key: 'globe', icon: 'globe-outline', label: 'Portfolio', color: theme.primary, url: 'https://IftikharZahid.github.io' },
     { key: 'logo-whatsapp', icon: 'logo-whatsapp', label: 'WhatsApp', color: '#25D366', url: 'https://wa.link/330h0s' },
   ];
 
@@ -132,7 +132,7 @@ export const AboutScreen: React.FC = () => {
 
         <View style={styles.footerWrap}>
           <Text style={[styles.footerText, { color: theme.textSecondary }]}>Made with ❤️ by </Text>
-          <TouchableOpacity onPress={() => Linking.openURL('https://zahid.codes')} activeOpacity={0.7} hitSlop={{ top: scale(10), bottom: scale(10), left: scale(10), right: scale(10) }}>
+          <TouchableOpacity onPress={() => Linking.openURL('https://IftikharZahid.github.io')} activeOpacity={0.7} hitSlop={{ top: scale(10), bottom: scale(10), left: scale(10), right: scale(10) }}>
             <Text style={[styles.footerLink, { color: theme.primary }]}>ZahidCodes</Text>
           </TouchableOpacity>
         </View>
