@@ -7,7 +7,11 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const GUIDELINE_BASE_WIDTH = 375;
 const GUIDELINE_BASE_HEIGHT = 812;
 
-const scale = (size: number) => (SCREEN_WIDTH / GUIDELINE_BASE_WIDTH) * size;
+// Clamp the width to prevent comically large scaling on tablets
+const MAX_WIDTH = 450;
+const effectiveWidth = Math.min(SCREEN_WIDTH, MAX_WIDTH);
+
+const scale = (size: number) => (effectiveWidth / GUIDELINE_BASE_WIDTH) * size;
 const verticalScale = (size: number) => (SCREEN_HEIGHT / GUIDELINE_BASE_HEIGHT) * size;
 const moderateScale = (size: number, factor = 0.5) => size + (scale(size) - size) * factor;
 

@@ -104,7 +104,7 @@ const mainHeaderTarget = `    <SafeAreaView style={[styles.container, { backgrou
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={scale(24)} color={theme.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: theme.text }]} numberOfLines={1}>{selectedClass} Diary</Text>
+        <Text style={[styles.headerTitle, { color: theme.text }]} numberOfLines={1} adjustsFontSizeToFit>{selectedClass} Diary</Text>
         <TouchableOpacity 
           style={styles.headerAddButton}
           onPress={() => {
@@ -126,7 +126,7 @@ const mainHeaderReplacement = `    <SafeAreaView style={[styles.container, { bac
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={scale(24)} color="#fff" />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: '#fff' }]} numberOfLines={1}>{selectedClass} Diary</Text>
+        <Text style={[styles.headerTitle, { color: '#fff' }]} numberOfLines={1} adjustsFontSizeToFit>{selectedClass} Diary</Text>
         <TouchableOpacity 
           style={styles.headerAddButton}
           onPress={() => {

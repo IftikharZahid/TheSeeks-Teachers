@@ -225,7 +225,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
       <View style={styles.safeArea}>
           <ScrollView
             ref={scrollViewRef}
-            contentContainerStyle={[styles.scrollContent, { paddingBottom: keyboardHeight }]}
+            contentContainerStyle={[styles.scrollContent, { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 60 : 30 }]}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
             bounces={false}
@@ -434,11 +434,10 @@ const styles = StyleSheet.create({
     paddingBottom: 0,
   },
 
-  /* ── Top Section ── */
   topSection: {
     alignItems: "center",
     width: "100%",
-    marginBottom: isSmall ? 10 : 14,
+    marginBottom: 0,
     zIndex: 1,
   },
   mainTitle: {
@@ -467,15 +466,14 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
 
-  /* ── Logo Section ── */
   logoSection: {
     alignItems: "center",
     width: "100%",
-    marginBottom: isSmall ? 10 : 16,
+    marginBottom: isSmall ? 6 : 10,
     zIndex: 1,
   },
   logoContainer: {
-    marginBottom: isSmall ? 4 : 8,
+    marginBottom: 0,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -487,7 +485,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: isSmall ? 6 : 10,
+    marginTop: isSmall ? -8 : -12, // Pull stars up to merge with logo
+    marginBottom: isSmall ? 2 : 4,
   },
   centerStar: {
     marginHorizontal: scale(4),
@@ -498,13 +497,13 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: COLORS.darkBlue,
     letterSpacing: 1,
-    marginBottom: isSmall ? 4 : 6,
+    marginBottom: isSmall ? 2 : 4,
   },
   locationRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: scale(12),
+    marginBottom: scale(6),
   },
   locationLine: {
     width: scale(30),
@@ -519,13 +518,12 @@ const styles = StyleSheet.create({
     letterSpacing: 4,
   },
 
-  /* ── Form Card ── */
   formCard: {
     width: "100%",
     backgroundColor: COLORS.white,
     borderRadius: scale(16),
     paddingHorizontal: isSmall ? 16 : 22,
-    paddingVertical: isSmall ? 16 : 22,
+    paddingVertical: isSmall ? 12 : 18,
     marginBottom: scale(12),
     zIndex: 1,
     shadowColor: "#000",
@@ -612,8 +610,8 @@ const styles = StyleSheet.create({
   /* ── Welcome Section ── */
   welcomeSection: {
     alignItems: "center",
-    marginBottom: isSmall ? 14 : 20,
-    marginTop: isSmall ? 0 : 4,
+    marginBottom: isSmall ? 10 : 14,
+    marginTop: 0,
   },
   welcomeTitle: {
     fontSize: isSmall ? 18 : 20,

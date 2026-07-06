@@ -161,7 +161,7 @@ const ChangePasswordScreen = () => {
       >
         <Ionicons name="arrow-back" size={scale(22)} color="#ffffff" />
       </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: '#fff' }]}>Change Password</Text>
+        <Text style={[styles.headerTitle, { color: '#fff' }]} numberOfLines={1} adjustsFontSizeToFit>Change Password</Text>
         <View style={{ width: scale(36) }} />
       </View>
 

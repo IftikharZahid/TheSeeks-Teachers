@@ -264,7 +264,7 @@ export const AdminVideoGalleryScreen: React.FC = () => {
       >
         <Ionicons name="arrow-back" size={scale(22)} color={isDark ? theme.text : '#ffffff'} />
       </TouchableOpacity>
-                <Text style={[styles.headerTitle, { color: isDark ? theme.text : '#fff' }]}>Video Gallery</Text>
+                <Text style={[styles.headerTitle, { color: isDark ? theme.text : '#fff' }]} numberOfLines={1} adjustsFontSizeToFit>Video Gallery</Text>
                 <TouchableOpacity onPress={() => openGalleryModal()} style={styles.addButton}>
                     <Ionicons name="add" size={20} color={isDark ? theme.text : theme.primary} />
                 </TouchableOpacity>

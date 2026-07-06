@@ -191,11 +191,10 @@ const styles = StyleSheet.create({
     paddingBottom: 0,
   },
 
-  /* ── Top Section ── */
   topSection: {
     alignItems: "center",
     width: "100%",
-    marginBottom: scale(16),
+    marginBottom: 0,
     zIndex: 1,
   },
   mainTitle: {
@@ -228,11 +227,11 @@ const styles = StyleSheet.create({
   logoSection: {
     alignItems: "center",
     width: "100%",
-    marginBottom: scale(16), // Compacted
+    marginBottom: scale(8),
     zIndex: 1,
   },
   logoContainer: {
-    marginBottom: scale(8),
+    marginBottom: 0,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -244,7 +243,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: scale(10),
+    marginTop: scale(-12), // Pull stars up to merge with logo
+    marginBottom: scale(4),
   },
   centerStar: {
     marginHorizontal: scale(4),
@@ -255,13 +255,13 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: COLORS.darkBlue,
     letterSpacing: 1,
-    marginBottom: scale(6),
+    marginBottom: scale(2),
   },
   locationRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: scale(12),
+    marginBottom: scale(6),
   },
   locationLine: {
     width: scale(30),
@@ -290,7 +290,7 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     justifyContent: "space-between",
     width: "100%",
-    marginBottom: scale(16),
+    marginBottom: scale(8),
     zIndex: 1,
   },
   featureCard: {
@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     borderRadius: scale(12),
     padding: scale(10), // Compacted
-    marginBottom: scale(12),
+    marginBottom: scale(8),
     flexDirection: "row",
     alignItems: "center",
     elevation: 6,

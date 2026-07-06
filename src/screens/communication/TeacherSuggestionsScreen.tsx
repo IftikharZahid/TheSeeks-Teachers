@@ -75,7 +75,7 @@ export const TeacherSuggestionsScreen: React.FC = () => {
       >
         <Ionicons name="arrow-back" size={scale(22)} color="#ffffff" />
       </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: '#fff' }]}>Submit Suggestion</Text>
+        <Text style={[styles.headerTitle, { color: '#fff' }]} numberOfLines={1} adjustsFontSizeToFit>Submit Suggestion</Text>
         <View style={{ width: scale(40) }} />
       </View>
 

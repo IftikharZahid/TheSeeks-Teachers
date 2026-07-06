@@ -227,7 +227,7 @@ export const AdminTeachersScreen: React.FC = () => {
       >
         <Ionicons name="arrow-back" size={scale(22)} color="#ffffff" />
       </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: '#fff' }]}>Teachers</Text>
+        <Text style={[styles.headerTitle, { color: '#fff' }]} numberOfLines={1} adjustsFontSizeToFit>Teachers</Text>
         <TouchableOpacity onPress={() => openModal()} style={styles.headerBtn}>
           <Ionicons name="add" size={22} color={theme.primary} />
         </TouchableOpacity>

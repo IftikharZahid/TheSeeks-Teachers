@@ -91,7 +91,7 @@ export const ClassesListScreen: React.FC = () => {
         
         <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
           <Ionicons name="document-text" size={scale(20)} color="#ffffff" style={{ marginRight: scale(6) }} />
-          <Text style={[styles.headerTitle, { color: '#ffffff' }]}>Manage Exams</Text>
+          <Text style={[styles.headerTitle, { color: '#ffffff' }]} numberOfLines={1} adjustsFontSizeToFit>Manage Exams</Text>
         </View>
 
         <View style={{ width: scale(38) }} />

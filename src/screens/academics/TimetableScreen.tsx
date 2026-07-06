@@ -204,7 +204,7 @@ export const AdminTimetableScreen: React.FC = () => {
         <Ionicons name="arrow-back" size={scale(22)} color={isDark ? theme.text : '#ffffff'} />
       </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={[styles.headerTitle, { color: isDark ? theme.text : '#fff' }]}>My Timetable</Text>
+          <Text style={[styles.headerTitle, { color: isDark ? theme.text : '#fff' }]} numberOfLines={1} adjustsFontSizeToFit>My Timetable</Text>
           <Text style={[styles.headerSub, { color: isDark ? theme.textSecondary : 'rgba(255,255,255,0.8)' }]}>
             {filteredEntries.length} period{filteredEntries.length !== 1 ? 's' : ''} — {selectedDay}
           </Text>

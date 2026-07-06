@@ -80,7 +80,7 @@ export const StaffInfoScreen: React.FC = () => {
       >
         <Ionicons name="arrow-back" size={scale(22)} color="#ffffff" />
       </TouchableOpacity>
-          <Text style={styles.headerTitle}>Teacher Profile</Text>
+          <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Teacher Profile</Text>
           <TouchableOpacity
             onPress={handleToggleLike}
             style={[styles.iconButton, { backgroundColor: 'rgba(255,255,255,0.2)' }]}

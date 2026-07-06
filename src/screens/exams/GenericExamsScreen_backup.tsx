@@ -1280,8 +1280,8 @@ export const GenericExamsScreen: React.FC = () => {
         <Ionicons name="arrow-back" size={scale(22)} color="#ffffff" />
       </TouchableOpacity>
         <View style={styles.headerTitleBlock}>
-          <Text style={[styles.headerTitle, { color: '#fff' }]}>{targetClass} Exams</Text>
-          <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>Results, marks, and student progress</Text>
+          <Text style={[styles.headerTitle, { color: '#fff' }]} numberOfLines={1} adjustsFontSizeToFit>{targetClass} Exams</Text>
+          <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]} numberOfLines={1} adjustsFontSizeToFit>Results, marks, and student progress</Text>
         </View>
         <TouchableOpacity onPress={() => openModal()} style={[styles.headerPrimaryButton, { backgroundColor: theme.primary }]}>
           <Ionicons name="add" size={18} color="#fff" />

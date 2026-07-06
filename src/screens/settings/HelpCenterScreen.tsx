@@ -98,7 +98,7 @@ export const HelpCenterScreen: React.FC = () => {
       >
         <Ionicons name="arrow-back" size={scale(22)} color="#ffffff" />
       </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: '#fff' }]}>Help Center</Text>
+        <Text style={[styles.headerTitle, { color: '#fff' }]} numberOfLines={1} adjustsFontSizeToFit>Help Center</Text>
         <View style={{ width: scale(36) }} />
       </View>
 

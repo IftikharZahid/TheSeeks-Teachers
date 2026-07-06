@@ -576,7 +576,7 @@ export const AdminAttendanceScreen: React.FC = () => {
             <Ionicons name="arrow-back" size={18} color="#ffffff" />
           </TouchableOpacity>
           <View style={styles.headerText}>
-            <Text style={styles.headerTitle}>Attendance Register{classFilter !== 'All' ? ` - ${classFilter}` : ''}</Text>
+            <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Attendance Register{classFilter !== 'All' ? ` - ${classFilter}` : ''}</Text>
             <Text style={styles.headerSub}>{selectedDate || 'Select a date'}</Text>
           </View>
           {dbLoading

@@ -365,7 +365,7 @@ export const DocumentsScreen: React.FC = () => {
       </TouchableOpacity>
 
         <View style={{ flex: 1 }}>
-          <Text style={[styles.headerTitle, { color: isDark ? theme.text : '#fff' }]} numberOfLines={1}>
+          <Text style={[styles.headerTitle, { color: isDark ? theme.text : '#fff' }]} numberOfLines={1} adjustsFontSizeToFit>
             {categoryFilter || 'Documents'}
           </Text>
           <Text style={[styles.headerSub, { color: isDark ? theme.textSecondary : 'rgba(255,255,255,0.8)' }]}>

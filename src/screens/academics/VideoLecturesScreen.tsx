@@ -404,10 +404,10 @@ export const VideoLecturesScreen: React.FC = () => {
       </TouchableOpacity>
 
                 <View style={styles.headerInfo}>
-                    <Text style={[styles.headerTitle, { color: isDark ? theme.text : '#fff' }]} numberOfLines={1}>
+                    <Text style={[styles.headerTitle, { color: isDark ? theme.text : '#fff' }]} numberOfLines={1} adjustsFontSizeToFit>
                         {galleryName}
                     </Text>
-                    <Text style={[styles.headerSubtitle, { color: isDark ? theme.textSecondary : 'rgba(255,255,255,0.8)' }]}>
+                    <Text style={[styles.headerSubtitle, { color: isDark ? theme.textSecondary : 'rgba(255,255,255,0.8)' }]} numberOfLines={1} adjustsFontSizeToFit>
                         {totalVideos} Videos
                     </Text>
                 </View>

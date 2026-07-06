@@ -467,6 +467,7 @@ export const Class1stYearExamsScreen: React.FC = () => {
 
   const [uploading, setUploading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [choiceModalVisible, setChoiceModalVisible] = useState(false);
   const [editingExam, setEditingExam] = useState<ExamEntry | null>(null);
   const titleAnchorRef = useRef<View | null>(null);
@@ -582,7 +583,7 @@ export const Class1stYearExamsScreen: React.FC = () => {
     });
   };
 
-  const handleSaveExam = async () => {
+  const _handleSaveExamCore = async () => {
     const formattedDate = date.toLocaleDateString('en-GB', {
       day: 'numeric', month: 'short', year: 'numeric'
     });
@@ -630,12 +631,14 @@ export const Class1stYearExamsScreen: React.FC = () => {
       }
     }
 
+    const currentSubject = scopedEntryBooks.length > 0 ? scopedEntryBooks.map(b => b.name).join(', ') : (isTeacher && selectedTeacherSubject ? selectedTeacherSubject : (bookName || ''));
     const isDuplicate = exams.some(exam => {
       if (editingExam && exam.id === editingExam.id) return false;
       return (
         exam.title === title &&
         exam.category === category &&
-        exam.rollNo === rollNo
+        exam.rollNo === rollNo &&
+        exam.bookName === currentSubject
       );
     });
 
@@ -648,8 +651,19 @@ export const Class1stYearExamsScreen: React.FC = () => {
     let totalObtained = 0;
     let totalPossible = 0;
 
-    if (scopedEntryBooks.length > 0) {
-      scopedEntryBooks.forEach(book => {
+    let finalBooks = scopedEntryBooks;
+    if (editingExam && editingExam.books && editingExam.books.length > 0) {
+      if (isTeacher) {
+        // Keep all existing books that are NOT being updated in the current edit
+        const otherBooks = editingExam.books.filter(b => 
+          !scopedEntryBooks.some((sb: any) => normalizeSubjectName(sb.name) === normalizeSubjectName(b.name))
+        );
+        finalBooks = [...otherBooks, ...scopedEntryBooks];
+      }
+    }
+
+    if (finalBooks.length > 0) {
+      finalBooks.forEach(book => {
         const obtained = parseFloat(book.obtainedMarks);
         const total = parseFloat(book.totalMarks);
         if (!isNaN(obtained) && !isNaN(total)) {
@@ -668,8 +682,8 @@ export const Class1stYearExamsScreen: React.FC = () => {
       }
     }
 
-    const finalTotalMarks = scopedEntryBooks.length > 0 ? totalPossible.toString() : (totalMarks || '');
-    const finalObtainedMarks = scopedEntryBooks.length > 0 ? totalObtained.toString() : (obtainedMarks || '');
+    const finalTotalMarks = finalBooks.length > 0 ? totalPossible.toString() : (totalMarks || '');
+    const finalObtainedMarks = finalBooks.length > 0 ? totalObtained.toString() : (obtainedMarks || '');
 
     const examData: any = {
       title,
@@ -679,8 +693,8 @@ export const Class1stYearExamsScreen: React.FC = () => {
       studentName: studentName || '',
       studentEmail: studentEmail || '',
       studentClass: studentClass || '',
-      books: scopedEntryBooks.length > 0 ? scopedEntryBooks : undefined,
-      bookName: scopedEntryBooks.length > 0 ? scopedEntryBooks.map(b => b.name).join(', ') : (isTeacher && selectedTeacherSubject ? selectedTeacherSubject : (bookName || '')),
+      books: finalBooks.length > 0 ? finalBooks : undefined,
+      bookName: finalBooks.length > 0 ? finalBooks.map(b => b.name).join(', ') : (isTeacher && selectedTeacherSubject ? selectedTeacherSubject : (bookName || '')),
       totalMarks: finalTotalMarks,
       obtainedMarks: finalObtainedMarks,
       status: computedStatus,
@@ -704,6 +718,17 @@ export const Class1stYearExamsScreen: React.FC = () => {
     } catch (error) {
       Alert.alert('Error', 'Failed to save exam record');
       console.error(error);
+    }
+  };
+
+
+  const handleSaveExam = async () => {
+    if (isSaving) return;
+    setIsSaving(true);
+    try {
+      await _handleSaveExamCore();
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -770,16 +795,36 @@ export const Class1stYearExamsScreen: React.FC = () => {
 
       let loadedBooks: BookEntry[] = [];
       if (exam.books && exam.books.length > 0) {
-        loadedBooks = JSON.parse(JSON.stringify(exam.books));
-      } else if (exam.bookName || exam.totalMarks || exam.obtainedMarks) {
-        loadedBooks = [{ name: exam.bookName || '', totalMarks: exam.totalMarks || '', obtainedMarks: exam.obtainedMarks || '' }];
+        loadedBooks = JSON.parse(JSON.stringify(exam.books)).map((b: any) => ({
+          name: b.name || '',
+          totalMarks: b.totalMarks != null ? String(b.totalMarks) : '',
+          obtainedMarks: b.obtainedMarks != null ? String(b.obtainedMarks) : ''
+        }));
+      } else if (exam.bookName || exam.totalMarks != null || exam.obtainedMarks != null) {
+        loadedBooks = [{ 
+          name: exam.bookName || '', 
+          totalMarks: exam.totalMarks != null ? String(exam.totalMarks) : '', 
+          obtainedMarks: exam.obtainedMarks != null ? String(exam.obtainedMarks) : '' 
+        }];
       }
 
       if (isTeacher && selectedTeacherSubject) {
-        loadedBooks = loadedBooks.filter(b => normalizeSubjectName(b.name) === normalizeSubjectName(selectedTeacherSubject));
-        const hasSubject = loadedBooks.some(b => normalizeSubjectName(b.name) === normalizeSubjectName(selectedTeacherSubject));
-        if (!hasSubject) {
-          loadedBooks.push({ name: selectedTeacherSubject.trim(), totalMarks: '', obtainedMarks: '' });
+        const normalizedTeacherSubject = normalizeSubjectName(selectedTeacherSubject);
+        const exactMatch = loadedBooks.find(b => normalizeSubjectName(b.name) === normalizedTeacherSubject);
+        
+        if (exactMatch) {
+          loadedBooks = [exactMatch];
+        } else {
+          const partialMatch = loadedBooks.find(b => normalizeSubjectName(b.name).includes(normalizedTeacherSubject));
+          if (partialMatch) {
+             loadedBooks = [{
+               name: selectedTeacherSubject.trim(),
+               totalMarks: partialMatch.totalMarks,
+               obtainedMarks: partialMatch.obtainedMarks
+             }];
+          } else {
+             loadedBooks = [{ name: selectedTeacherSubject.trim(), totalMarks: '', obtainedMarks: '' }];
+          }
         }
       }
       setEntryBooks(loadedBooks);
@@ -1307,8 +1352,8 @@ export const Class1stYearExamsScreen: React.FC = () => {
             <Ionicons name="arrow-back" size={scale(22)} color={isDark ? theme.text : '#ffffff'} />
           </TouchableOpacity>
           <View style={styles.headerTitleBlock}>
-            <Text style={[styles.headerTitle, { color: isDark ? theme.text : '#ffffff' }]}>1st Year Exams</Text>
-            <Text style={[styles.headerSubtitle, { color: isDark ? theme.textSecondary : 'rgba(255,255,255,0.7)' }]}>Results, marks, and student progress</Text>
+            <Text style={[styles.headerTitle, { color: isDark ? theme.text : '#ffffff' }]} numberOfLines={1} adjustsFontSizeToFit>1st Year Exams</Text>
+            <Text style={[styles.headerSubtitle, { color: isDark ? theme.textSecondary : 'rgba(255,255,255,0.7)' }]} numberOfLines={1} adjustsFontSizeToFit>Results, marks, and student progress</Text>
           </View>
           <TouchableOpacity onPress={() => openModal()} style={[styles.headerPrimaryButton, { backgroundColor: isDark ? theme.primary + '30' : 'rgba(255,255,255,0.2)' }]}>
             <Ionicons name="add" size={18} color={isDark ? theme.text : '#fff'} />
@@ -1559,9 +1604,9 @@ export const Class1stYearExamsScreen: React.FC = () => {
                 <Text style={{ fontSize: scale(17), fontWeight: '800', color: '#fff' }}>{editingExam ? 'Edit Record' : 'New Record'}</Text>
                 <Text style={{ fontSize: scale(11), color: 'rgba(255,255,255,0.75)', marginTop: scale(1) }}>{editingExam ? 'Update exam details' : 'Enter student exam details'}</Text>
               </View>
-              <TouchableOpacity onPress={handleSaveExam} style={{ paddingHorizontal: scale(14), paddingVertical: scale(8), borderRadius: scale(20), backgroundColor: isDark ? theme.primary + '30' : 'rgba(255,255,255,0.2)', flexDirection: 'row', alignItems: 'center', gap: scale(4) }}>
-                <Ionicons name="checkmark" size={16} color={isDark ? theme.text : '#fff'} />
-                <Text style={{ fontSize: scale(12), fontWeight: '700', color: '#fff' }}>Save</Text>
+              <TouchableOpacity disabled={isSaving} onPress={handleSaveExam} style={{ paddingHorizontal: scale(14), paddingVertical: scale(8), borderRadius: scale(20), backgroundColor: isDark ? theme.primary + '30' : 'rgba(255,255,255,0.2)', flexDirection: 'row', alignItems: 'center', gap: scale(4) , opacity: isSaving ? 0.7 : 1 }}>
+                {isSaving ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="checkmark" size={16} color={isDark ? theme.text : '#fff'} />}
+              <Text style={{ fontSize: scale(12), fontWeight: '700', color: '#fff' }}>{isSaving ? '...' : 'Save'}</Text>
               </TouchableOpacity>
             </View>
             <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -1656,51 +1701,56 @@ export const Class1stYearExamsScreen: React.FC = () => {
                       </View>
                     </View>
 
-                    {/* ── Test No. picker ── */}
-                    <View style={[styles.col, { flex: 0.35, zIndex: 2000 }]}>
-                      <Text style={[styles.label, { color: theme.text }]}>Test No.</Text>
-                      <View style={{ position: 'relative', zIndex: 2000 }}>
-                        <TouchableOpacity
-                          ref={titleAnchorRef}
-                          onPress={() => {
-                            setShowTitleDropdown(!showTitleDropdown);
-                            setShowClassDropdown(false);
-                            setShowBookDropdown(false);
-                            setShowStudentDropdown(false);
-                            setShowCategoryDropdown(false);
-                          }}
-                          style={[styles.selectInput, { backgroundColor: theme.card, borderColor: showTitleDropdown ? theme.primary : theme.border, marginBottom: 0 }]}
-                        >
-                          <Text style={{ color: title ? theme.text : theme.textSecondary, fontSize: scale(13), flex: 1 }}>
-                            {title || 'Select'}
-                          </Text>
-                          <Ionicons name={showTitleDropdown ? 'chevron-up' : 'chevron-down'} size={14} color={theme.textSecondary} />
-                        </TouchableOpacity>
+                    {isTeacher && (
+                      <View style={[styles.col, { flex: 0.35, zIndex: 2000 }]}>
 
-                        {/* ▼ REPLACED: Title / Test No Dropdown — 5 visible, scrollable */}
-                        {showTitleDropdown && (
-                          <View style={{ marginTop: scale(4) }}>
-                            <DropdownMenu
-                              options={dynamicTitleOptions.map(t => ({
-                                label: t,
-                                value: t,
-                                icon: 'document-text-outline',
-                              }))}
-                              selectedValue={title}
-                              onSelect={(val) => {
-                                setTitle(val);
-                                setShowTitleDropdown(false);
-                              }}
-                              theme={theme}
-                              maxHeight={DROPDOWN_ITEM_HEIGHT * 5}
-                              showScrollBar={true}
-                              anchorRef={titleAnchorRef}
-                              onClose={() => setShowTitleDropdown(false)}
-                            />
-                          </View>
+                    <Text style={[styles.label, { color: theme.text }]}>Subject</Text>
+                    <View style={{ position: 'relative', zIndex: 1400 }}>
+                      <TouchableOpacity
+                        ref={teacherSubjectAnchorRef}
+                        onPress={() => {
+                          setShowTeacherSubjectDropdown(!showTeacherSubjectDropdown);
+                          setShowCategoryDropdown(false);
+                          setShowTitleDropdown(false);
+                          setShowClassDropdown(false);
+                          setShowBookDropdown(false);
+                          setShowStudentDropdown(false);
+                        }}
+                        style={[styles.selectInput, { backgroundColor: theme.card, borderColor: showTeacherSubjectDropdown ? theme.primary : theme.border }]}
+                        disabled={teacherSubjectsList.length <= 1}
+                      >
+                        <Ionicons name="book-outline" size={14} color={theme.textSecondary} style={{ marginRight: scale(6) }} />
+                        <Text style={{ color: selectedTeacherSubject ? theme.text : theme.textSecondary, fontSize: scale(13), flex: 1 }}>
+                          {selectedTeacherSubject || 'Select Subject'}
+                        </Text>
+                        {teacherSubjectsList.length > 1 && (
+                          <Ionicons name={showTeacherSubjectDropdown ? 'chevron-up' : 'chevron-down'} size={14} color={theme.textSecondary} />
                         )}
-                      </View>
+                      </TouchableOpacity>
+                      {showTeacherSubjectDropdown && teacherSubjectsList.length > 1 && (
+                        <DropdownMenu
+                          options={teacherSubjectsList.map((s) => ({
+                            label: s,
+                            value: s,
+                            icon: 'book-outline',
+                          }))}
+                          selectedValue={selectedTeacherSubject}
+                          onSelect={(val) => {
+                            setSelectedTeacherSubject(val);
+                            setEntryBooks([{ name: val.trim(), totalMarks: '', obtainedMarks: '' }]);
+                            setShowTeacherSubjectDropdown(false);
+                          }}
+                          theme={theme}
+                          zIndex={1500}
+                          maxHeight={DROPDOWN_ITEM_HEIGHT * 5}
+                          showScrollBar={true}
+                          anchorRef={teacherSubjectAnchorRef}
+                          onClose={() => setShowTeacherSubjectDropdown(false)}
+                        />
+                      )}
                     </View>
+                                        </View>
+                    )}
                   </View>
 
                   {/* Student Dropdown Results */}
@@ -1817,7 +1867,9 @@ export const Class1stYearExamsScreen: React.FC = () => {
 
               {/* Duplicate Warning */}
               {title && rollNo && !editingExam && (() => {
-                const duplicate = exams.find(e => e.title === title && e.rollNo === rollNo);
+                const scopedEntryBooksUI = isTeacher && typeof teacherSubjectsList !== 'undefined' && teacherSubjectsList.length > 0 ? entryBooks.filter(book => teacherSubjectsList.some((s) => s.toLowerCase() === book.name.toLowerCase())) : entryBooks;
+                const currentSubject = scopedEntryBooksUI.length > 0 ? scopedEntryBooksUI.map(b => b.name).join(', ') : (isTeacher && selectedTeacherSubject ? selectedTeacherSubject : (bookName || ''));
+                const duplicate = exams.find(e => e.title === title && e.category === category && e.rollNo === rollNo && e.bookName === currentSubject);
                 if (duplicate) {
                   return (
                     <View style={{ backgroundColor: '#FFF3CD', borderRadius: scale(8), padding: scale(10), marginBottom: scale(10), flexDirection: 'row', alignItems: 'center' }}>
@@ -1831,9 +1883,53 @@ export const Class1stYearExamsScreen: React.FC = () => {
                 return null;
               })()}
 
-              {/* Row: Category + Date */}
+                            {/* Row: Test No + Category + Date */}
               <View style={[styles.row, { zIndex: 1500 }]}>
-                <View style={[styles.col, { flex: 0.55, position: 'relative', zIndex: 1500 }]}>
+                {/* ── Test No. picker ── */}
+                <View style={[styles.col, { flex: 0.35, position: 'relative', zIndex: 2000 }]}>
+                  <Text style={[styles.label, { color: theme.text }]}>Test No.</Text>
+                  <TouchableOpacity
+                    ref={titleAnchorRef}
+                    onPress={() => {
+                      setShowTitleDropdown(!showTitleDropdown);
+                      setShowClassDropdown(false);
+                      setShowBookDropdown(false);
+                      setShowStudentDropdown(false);
+                      setShowCategoryDropdown(false);
+                    }}
+                    style={[styles.selectInput, { backgroundColor: theme.card, borderColor: showTitleDropdown ? theme.primary : theme.border, marginBottom: 0, paddingHorizontal: scale(8) }]}
+                  >
+                    <Text style={{ color: title ? theme.text : theme.textSecondary, fontSize: scale(11), flex: 1 }} numberOfLines={1}>
+                      {title || 'Select'}
+                    </Text>
+                    <Ionicons name={showTitleDropdown ? 'chevron-up' : 'chevron-down'} size={12} color={theme.textSecondary} />
+                  </TouchableOpacity>
+
+                  {showTitleDropdown && (
+                    <View style={{ marginTop: scale(4) }}>
+                      <DropdownMenu
+                        options={dynamicTitleOptions.map(t => ({
+                          label: t,
+                          value: t,
+                          icon: 'document-text-outline',
+                        }))}
+                        selectedValue={title}
+                        onSelect={(val) => {
+                          setTitle(val);
+                          setShowTitleDropdown(false);
+                        }}
+                        theme={theme}
+                        maxHeight={DROPDOWN_ITEM_HEIGHT * 5}
+                        showScrollBar={true}
+                        anchorRef={titleAnchorRef}
+                        onClose={() => setShowTitleDropdown(false)}
+                      />
+                    </View>
+                  )}
+                </View>
+
+                {/* ── Category picker ── */}
+                <View style={[styles.col, { flex: 0.35, position: 'relative', zIndex: 1500 }]}>
                   <Text style={[styles.label, { color: theme.text }]}>Category</Text>
                   <TouchableOpacity
                     ref={categoryAnchorRef}
@@ -1844,67 +1940,14 @@ export const Class1stYearExamsScreen: React.FC = () => {
                       setShowBookDropdown(false);
                       setShowStudentDropdown(false);
                     }}
-                    style={[styles.selectInput, { backgroundColor: theme.card, borderColor: showCategoryDropdown ? theme.primary : theme.border }]}
+                    style={[styles.selectInput, { backgroundColor: theme.card, borderColor: showCategoryDropdown ? theme.primary : theme.border, marginBottom: 0, paddingHorizontal: scale(8) }]}
                   >
-                    <Text style={{ color: category ? theme.text : theme.textSecondary, fontSize: scale(13), flex: 1 }}>
+                    <Text style={{ color: category ? theme.text : theme.textSecondary, fontSize: scale(11), flex: 1 }} numberOfLines={1}>
                       {category || 'Select'}
                     </Text>
-                    <Ionicons name={showCategoryDropdown ? 'chevron-up' : 'chevron-down'} size={14} color={theme.textSecondary} />
+                    <Ionicons name={showCategoryDropdown ? 'chevron-up' : 'chevron-down'} size={12} color={theme.textSecondary} />
                   </TouchableOpacity>
 
-                  
-              {isTeacher && (
-                <View style={[styles.row, { marginTop: scale(10), zIndex: 1400 }]}>
-                  <View style={[styles.col, { flex: 1 }]}>
-                    <Text style={[styles.label, { color: theme.text }]}>Subject</Text>
-                    <View style={{ position: 'relative', zIndex: 1400 }}>
-                      <TouchableOpacity
-                        ref={teacherSubjectAnchorRef}
-                        onPress={() => {
-                          setShowTeacherSubjectDropdown(!showTeacherSubjectDropdown);
-                          setShowCategoryDropdown(false);
-                          setShowTitleDropdown(false);
-                          setShowClassDropdown(false);
-                          setShowBookDropdown(false);
-                          setShowStudentDropdown(false);
-                        }}
-                        style={[styles.selectInput, { backgroundColor: theme.card, borderColor: showTeacherSubjectDropdown ? theme.primary : theme.border }]}
-                        disabled={teacherSubjectsList.length <= 1}
-                      >
-                        <Ionicons name="book-outline" size={14} color={theme.textSecondary} style={{ marginRight: scale(6) }} />
-                        <Text style={{ color: selectedTeacherSubject ? theme.text : theme.textSecondary, fontSize: scale(13), flex: 1 }}>
-                          {selectedTeacherSubject || 'Select Subject'}
-                        </Text>
-                        {teacherSubjectsList.length > 1 && (
-                          <Ionicons name={showTeacherSubjectDropdown ? 'chevron-up' : 'chevron-down'} size={14} color={theme.textSecondary} />
-                        )}
-                      </TouchableOpacity>
-                      {showTeacherSubjectDropdown && teacherSubjectsList.length > 1 && (
-                        <DropdownMenu
-                          options={teacherSubjectsList.map((s) => ({
-                            label: s,
-                            value: s,
-                            icon: 'book-outline',
-                          }))}
-                          selectedValue={selectedTeacherSubject}
-                          onSelect={(val) => {
-                            setSelectedTeacherSubject(val);
-                            setShowTeacherSubjectDropdown(false);
-                          }}
-                          theme={theme}
-                          zIndex={1500}
-                          maxHeight={DROPDOWN_ITEM_HEIGHT * 5}
-                          showScrollBar={true}
-                          anchorRef={teacherSubjectAnchorRef}
-                          onClose={() => setShowTeacherSubjectDropdown(false)}
-                        />
-                      )}
-                    </View>
-                  </View>
-                </View>
-              )}
-
-              {/* ▼ REPLACED: Category Dropdown — 5 visible, scrollable */}
                   {showCategoryDropdown && (
                     <DropdownMenu
                       options={CATEGORIES.map((cat, i) => ({
@@ -1925,15 +1968,16 @@ export const Class1stYearExamsScreen: React.FC = () => {
                   )}
                 </View>
 
-                <View style={[styles.col, { flex: 0.45 }]}>
+                {/* ── Date picker ── */}
+                <View style={[styles.col, { flex: 0.3 }]}>
                   <Text style={[styles.label, { color: theme.text }]}>Date</Text>
                   <TouchableOpacity
                     onPress={() => setShowDatePicker(true)}
-                    style={[styles.selectInput, { backgroundColor: theme.card, borderColor: theme.border }]}
+                    style={[styles.selectInput, { backgroundColor: theme.card, borderColor: theme.border, marginBottom: 0, paddingHorizontal: scale(4) }]}
                   >
-                    <Ionicons name="calendar-outline" size={14} color={theme.textSecondary} style={{ marginRight: scale(6) }} />
-                    <Text style={{ color: theme.text, fontSize: scale(13), flex: 1 }}>
-                      {date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    <Ionicons name="calendar-outline" size={12} color={theme.textSecondary} style={{ marginRight: scale(2) }} />
+                    <Text style={{ color: theme.text, fontSize: scale(10), flex: 1 }} numberOfLines={1} adjustsFontSizeToFit>
+                      {date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -2216,9 +2260,9 @@ export const Class1stYearExamsScreen: React.FC = () => {
             />
 
             {/* Save Button */}
-            <TouchableOpacity onPress={handleSaveExam} style={[styles.fsFormSaveButton, { backgroundColor: theme.primary }]}>
-              <Ionicons name={editingExam ? 'checkmark-circle' : 'save-outline'} size={18} color={isDark ? theme.text : '#fff'} />
-              <Text style={styles.fsFormSaveButtonText}>{editingExam ? 'Update Record' : 'Save Record'}</Text>
+            <TouchableOpacity disabled={isSaving} onPress={handleSaveExam} style={[styles.fsFormSaveButton, { backgroundColor: theme.primary }, { opacity: isSaving ? 0.7 : 1 }]}>
+              {isSaving ? <ActivityIndicator size="small" color={isDark ? theme.text : '#fff'} /> : <Ionicons name={editingExam ? 'checkmark-circle' : 'save-outline'} size={18} color={isDark ? theme.text : '#fff'} />}
+                <Text style={styles.fsFormSaveButtonText}>{isSaving ? 'Processing...' : (editingExam ? 'Update Record' : 'Save Record')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity onPress={() => { setModalVisible(false); resetForm(); }} style={styles.fsFormCancelButton}>
@@ -2436,46 +2480,82 @@ export const Class1stYearExamsScreen: React.FC = () => {
             <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
               {/* Compact Stats Row */}
               {(() => {
-                const sel = selectedExamForOptions;
-                let displayTotal = sel?.totalMarks || '—';
-                let displayObtained = sel?.obtainedMarks || '—';
-                if (sel?.books && sel.books.length > 0) {
-                  let sumTotal = 0; let sumObtained = 0;
-                  sel.books.forEach(b => {
-                    const t = parseFloat(b.totalMarks); const o = parseFloat(b.obtainedMarks);
-                    if (!isNaN(t)) sumTotal += t;
-                    if (!isNaN(o)) sumObtained += o;
-                  });
-                  displayTotal = sumTotal.toString();
-                  displayObtained = sumObtained.toString();
+                const selOriginal = selectedExamForOptions;
+                const studentKey = (selOriginal?.rollNo || selOriginal?.studentName || '');
+                const studentClass = selOriginal?.studentClass || '';
+                const studentExams = exams.filter(e => {
+                  const k = (e.rollNo || e.studentName || '');
+                  return k === studentKey && (e.studentClass || '') === studentClass;
+                });
+                const sameTests = studentExams.filter(e => e.title === selOriginal?.title && e.category === selOriginal?.category);
+                
+                let combinedBooks: any[] = [];
+                sameTests.forEach(test => {
+                  if (test.books && test.books.length > 0) {
+                    test.books.forEach(b => combinedBooks.push(b));
+                  } else if (test.bookName) {
+                    combinedBooks.push({
+                      name: test.bookName,
+                      totalMarks: test.totalMarks || '0',
+                      obtainedMarks: test.obtainedMarks || '0'
+                    });
+                  }
+                });
+                
+                let displayTotal = combinedBooks.reduce((sum, b) => sum + (parseFloat(b.totalMarks) || 0), 0).toString();
+                let displayObtained = combinedBooks.reduce((sum, b) => sum + (parseFloat(b.obtainedMarks) || 0), 0).toString();
+                if (displayTotal === '0' && displayObtained === '0' && combinedBooks.length === 0) {
+                   displayTotal = selOriginal?.totalMarks || '—';
+                   displayObtained = selOriginal?.obtainedMarks || '—';
                 }
                 const percentage = displayTotal !== '—' && displayObtained !== '—' && parseFloat(displayTotal) > 0
                   ? ((parseFloat(displayObtained) / parseFloat(displayTotal)) * 100).toFixed(1) + '%' : null;
+                
+                const status = percentage ? (parseFloat(percentage) >= 40 ? 'Pass' : 'Fail') : (selOriginal?.status || 'Active');
 
                 return (
                   <View style={{ flexDirection: 'row', gap: scale(6), marginBottom: scale(12) }}>
-                    <View style={{ flex: 1, borderRadius: scale(8), paddingVertical: scale(7), paddingHorizontal: scale(6), alignItems: 'center', borderWidth: 1, backgroundColor: sel?.status === 'Pass' ? '#E8F5E910' : sel?.status === 'Fail' ? '#FFEBEE10' : '#FFF3E010', borderColor: sel?.status === 'Pass' ? '#2E7D3225' : sel?.status === 'Fail' ? '#C6282825' : '#EF6C0025' }}>
-                      <Text style={{ fontSize: scale(9), color: theme.textSecondary, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: scale(2) }}>Status</Text>
-                      <Text style={{ fontSize: scale(12), fontWeight: '800', color: sel?.status === 'Pass' ? '#2E7D32' : sel?.status === 'Fail' ? '#C62828' : '#EF6C00' }}>{sel?.status || 'Active'}</Text>
+                    <View style={{ flex: 1, borderRadius: scale(6), paddingVertical: scale(6), alignItems: 'center', borderWidth: 1, backgroundColor: status === 'Pass' ? '#E8F5E910' : status === 'Fail' ? '#FFEBEE10' : '#FFF3E010', borderColor: status === 'Pass' ? '#2E7D3225' : status === 'Fail' ? '#C6282825' : '#EF6C0025' }}>
+                      <Text style={{ fontSize: scale(9), color: theme.textSecondary, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: scale(1) }}>Status</Text>
+                      <Text style={{ fontSize: scale(12), fontWeight: '800', color: status === 'Pass' ? '#2E7D32' : status === 'Fail' ? '#C62828' : '#EF6C00' }}>{status}</Text>
                     </View>
-                    <View style={{ flex: 1, backgroundColor: theme.background, borderRadius: scale(8), paddingVertical: scale(7), paddingHorizontal: scale(6), alignItems: 'center', borderWidth: 1, borderColor: theme.border }}>
-                      <Text style={{ fontSize: scale(9), color: theme.textSecondary, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: scale(2) }}>Total</Text>
-                      <Text style={{ fontSize: scale(15), fontWeight: '800', color: theme.text }}>{displayTotal}</Text>
+                    <View style={{ flex: 1, backgroundColor: theme.background, borderRadius: scale(6), paddingVertical: scale(6), alignItems: 'center', borderWidth: 1, borderColor: theme.border }}>
+                      <Text style={{ fontSize: scale(9), color: theme.textSecondary, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: scale(1) }}>Total</Text>
+                      <Text style={{ fontSize: scale(13), fontWeight: '800', color: theme.text }}>{displayTotal}</Text>
                     </View>
-                    <View style={{ flex: 1, backgroundColor: theme.primary + '08', borderRadius: scale(8), paddingVertical: scale(7), paddingHorizontal: scale(6), alignItems: 'center', borderWidth: 1, borderColor: theme.primary + '20' }}>
-                      <Text style={{ fontSize: scale(9), color: theme.primary, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: scale(2) }}>Obtained</Text>
-                      <Text style={{ fontSize: scale(15), fontWeight: '800', color: theme.primary }}>{displayObtained}</Text>
-                      {percentage && <Text style={{ fontSize: scale(9), color: theme.primary, marginTop: scale(1) }}>({percentage})</Text>}
+                    <View style={{ flex: 1, backgroundColor: theme.primary + '08', borderRadius: scale(6), paddingVertical: scale(6), alignItems: 'center', borderWidth: 1, borderColor: theme.primary + '20' }}>
+                      <Text style={{ fontSize: scale(9), color: theme.primary, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: scale(1) }}>Obtained</Text>
+                      <Text style={{ fontSize: scale(13), fontWeight: '800', color: theme.primary }}>{displayObtained}</Text>
+                      {percentage && <Text style={{ fontSize: scale(8), color: theme.primary, marginTop: scale(1) }}>({percentage})</Text>}
                     </View>
-                    <View style={{ flex: 1, backgroundColor: theme.background, borderRadius: scale(8), paddingVertical: scale(7), paddingHorizontal: scale(6), alignItems: 'center', borderWidth: 1, borderColor: theme.border }}>
-                      <Text style={{ fontSize: scale(9), color: theme.textSecondary, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: scale(2) }}>Pos.</Text>
+                    <View style={{ flex: 1, backgroundColor: theme.background, borderRadius: scale(6), paddingVertical: scale(6), alignItems: 'center', borderWidth: 1, borderColor: theme.border }}>
+                      <Text style={{ fontSize: scale(9), color: theme.textSecondary, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: scale(1) }}>Pos.</Text>
                       <Text style={{ fontSize: scale(12), fontWeight: '800', color: theme.text }}>
                         {(() => {
-                          if (!sel) return '—';
-                          const sameGroup = exams.filter(e => e.title === sel.title && e.studentClass === sel.studentClass);
-                          const sorted = [...sameGroup].sort((a, b) => (parseFloat(b.obtainedMarks || '0')) - (parseFloat(a.obtainedMarks || '0')));
-                          const pos = sorted.findIndex(e => e.id === sel.id) + 1;
-                          return pos > 0 ? `${pos}/${sorted.length}` : '—';
+                          if (!selOriginal) return '—';
+                          
+                          const sameGroupExams = exams.filter(e => e.title === selOriginal.title && e.studentClass === selOriginal.studentClass && e.category === selOriginal.category);
+                          
+                          const studentScores = new Map();
+                          sameGroupExams.forEach(e => {
+                            const key = (e.rollNo || e.studentName || '');
+                            if (!studentScores.has(key)) {
+                              studentScores.set(key, 0);
+                            }
+                            
+                            let eObt = 0;
+                            if (e.books && e.books.length > 0) {
+                              e.books.forEach(b => eObt += parseFloat(b.obtainedMarks) || 0);
+                            } else {
+                              eObt = parseFloat(e.obtainedMarks || '0') || 0;
+                            }
+                            studentScores.set(key, studentScores.get(key) + eObt);
+                          });
+                          
+                          const sortedScores = Array.from(studentScores.entries()).sort((a, b) => b[1] - a[1]);
+                          const myKey = (selOriginal?.rollNo || selOriginal?.studentName || '') as string;
+                          const pos = sortedScores.findIndex(s => s[0] === myKey) + 1;
+                          return pos > 0 ? `${pos}/${sortedScores.length}` : '—';
                         })()}
                       </Text>
                     </View>
@@ -2484,58 +2564,108 @@ export const Class1stYearExamsScreen: React.FC = () => {
               })()}
 
               {/* Subject Breakdown */}
-              {selectedExamForOptions?.books && selectedExamForOptions.books.length > 0 && (
-                <View style={{ marginBottom: scale(16), backgroundColor: theme.background, borderRadius: scale(12), borderWidth: 1, borderColor: theme.border, overflow: 'hidden' }}>
-                  <View style={{ flexDirection: 'row', paddingVertical: scale(10), paddingHorizontal: scale(14), backgroundColor: theme.primary + '08', borderBottomWidth: 1, borderBottomColor: theme.border }}>
-                    <Text style={{ flex: 1, fontSize: scale(11), fontWeight: '700', color: theme.primary, textTransform: 'uppercase', letterSpacing: 0.3 }}>Subject</Text>
-                    <Text style={{ width: scale(60), fontSize: scale(11), fontWeight: '700', color: theme.primary, textTransform: 'uppercase', letterSpacing: 0.3, textAlign: 'center' }}>Total</Text>
-                    <Text style={{ width: scale(60), fontSize: scale(11), fontWeight: '700', color: theme.primary, textTransform: 'uppercase', letterSpacing: 0.3, textAlign: 'center' }}>Obt.</Text>
-                  </View>
-                  {selectedExamForOptions.books.map((book, idx) => (
-                    <View key={idx} style={{ flexDirection: 'row', paddingVertical: scale(10), paddingHorizontal: scale(14), alignItems: 'center', backgroundColor: idx % 2 === 0 ? 'transparent' : theme.card + '60', borderBottomWidth: idx < selectedExamForOptions.books!.length - 1 ? 0.5 : 0, borderBottomColor: theme.border }}>
-                      <Text style={{ flex: 1, fontSize: scale(13), color: theme.text, fontWeight: '500' }}>{book.name}</Text>
-                      <Text style={{ width: scale(60), fontSize: scale(13), color: theme.textSecondary, textAlign: 'center' }}>{book.totalMarks}</Text>
-                      <Text style={{ width: scale(60), fontSize: scale(13), fontWeight: '600', color: theme.text, textAlign: 'center' }}>{book.obtainedMarks}</Text>
+              {(() => {
+                const selOriginal = selectedExamForOptions;
+                if (!selOriginal) return null;
+                const studentKey = (selOriginal?.rollNo || selOriginal?.studentName || '');
+                const studentClass = selOriginal?.studentClass || '';
+                const studentExams = exams.filter(e => {
+                  const k = (e.rollNo || e.studentName || '');
+                  return k === studentKey && (e.studentClass || '') === studentClass;
+                });
+                const sameTests = studentExams.filter(e => e.title === selOriginal.title && e.category === selOriginal.category);
+                
+                let combinedBooks: any[] = [];
+                sameTests.forEach(test => {
+                  if (test.books && test.books.length > 0) {
+                    test.books.forEach(b => combinedBooks.push(b));
+                  } else if (test.bookName) {
+                    combinedBooks.push({
+                      name: test.bookName,
+                      totalMarks: test.totalMarks || '0',
+                      obtainedMarks: test.obtainedMarks || '0'
+                    });
+                  }
+                });
+                
+                if (combinedBooks.length === 0) return null;
+
+                return (
+                  <View style={{ marginBottom: scale(12), backgroundColor: theme.background, borderRadius: scale(8), borderWidth: 1, borderColor: theme.border, overflow: 'hidden' }}>
+                    <View style={{ flexDirection: 'row', paddingVertical: scale(6), paddingHorizontal: scale(10), backgroundColor: theme.primary + '08', borderBottomWidth: 1, borderBottomColor: theme.border }}>
+                      <Text style={{ flex: 1, fontSize: scale(10), fontWeight: '700', color: theme.primary, textTransform: 'uppercase', letterSpacing: 0.3 }}>Subject</Text>
+                      <Text style={{ width: scale(40), fontSize: scale(10), fontWeight: '700', color: theme.primary, textTransform: 'uppercase', letterSpacing: 0.3, textAlign: 'center' }}>Total</Text>
+                      <Text style={{ width: scale(40), fontSize: scale(10), fontWeight: '700', color: theme.primary, textTransform: 'uppercase', letterSpacing: 0.3, textAlign: 'center' }}>Obt.</Text>
                     </View>
-                  ))}
-                  <View style={{ flexDirection: 'row', paddingVertical: scale(10), paddingHorizontal: scale(14), backgroundColor: theme.primary + '10', borderTopWidth: 1, borderTopColor: theme.border }}>
-                    <Text style={{ flex: 1, fontSize: scale(12), fontWeight: '800', color: theme.primary, textTransform: 'uppercase' }}>Grand Total</Text>
-                    <Text style={{ width: scale(60), fontSize: scale(13), fontWeight: '800', color: theme.text, textAlign: 'center' }}>
-                      {selectedExamForOptions.books.reduce((s, b) => s + (parseFloat(b.totalMarks) || 0), 0)}
-                    </Text>
-                    <Text style={{ width: scale(60), fontSize: scale(13), fontWeight: '800', color: theme.primary, textAlign: 'center' }}>
-                      {selectedExamForOptions.books.reduce((s, b) => s + (parseFloat(b.obtainedMarks) || 0), 0)}
-                    </Text>
+                    {combinedBooks.map((book, idx) => (
+                      <View key={idx} style={{ flexDirection: 'row', paddingVertical: scale(6), paddingHorizontal: scale(10), alignItems: 'center', backgroundColor: idx % 2 === 0 ? 'transparent' : theme.card + '60', borderBottomWidth: idx < combinedBooks.length - 1 ? 0.5 : 0, borderBottomColor: theme.border }}>
+                        <Text style={{ flex: 1, fontSize: scale(11), color: theme.text, fontWeight: '500' }}>{book.name}</Text>
+                        <Text style={{ width: scale(40), fontSize: scale(11), color: theme.textSecondary, textAlign: 'center' }}>{book.totalMarks}</Text>
+                        <Text style={{ width: scale(40), fontSize: scale(11), fontWeight: '600', color: theme.text, textAlign: 'center' }}>{book.obtainedMarks}</Text>
+                      </View>
+                    ))}
+                    <View style={{ flexDirection: 'row', paddingVertical: scale(6), paddingHorizontal: scale(10), backgroundColor: theme.primary + '10', borderTopWidth: 1, borderTopColor: theme.border }}>
+                      <Text style={{ flex: 1, fontSize: scale(10), fontWeight: '800', color: theme.primary, textTransform: 'uppercase' }}>Total</Text>
+                      <Text style={{ width: scale(40), fontSize: scale(11), fontWeight: '800', color: theme.text, textAlign: 'center' }}>
+                        {combinedBooks.reduce((s, b) => s + (parseFloat(b.totalMarks) || 0), 0)}
+                      </Text>
+                      <Text style={{ width: scale(40), fontSize: scale(11), fontWeight: '800', color: theme.primary, textAlign: 'center' }}>
+                        {combinedBooks.reduce((s, b) => s + (parseFloat(b.obtainedMarks) || 0), 0)}
+                      </Text>
+                    </View>
                   </View>
-                </View>
-              )}
+                );
+              })()}
 
               {/* Description */}
               {selectedExamForOptions?.description && (
-                <View style={{ marginBottom: scale(16), flexDirection: 'row', backgroundColor: theme.background, borderRadius: scale(10), padding: scale(12), borderLeftWidth: 3, borderLeftColor: theme.primary }}>
-                  <Ionicons name="chatbubble-outline" size={14} color={theme.textSecondary} style={{ marginRight: scale(8), marginTop: scale(1) }} />
-                  <Text style={{ fontSize: scale(13), color: theme.textSecondary, fontStyle: 'italic', flex: 1 }}>"{selectedExamForOptions.description}"</Text>
+                <View style={{ marginBottom: scale(12), flexDirection: 'row', backgroundColor: theme.background, borderRadius: scale(6), padding: scale(8), borderLeftWidth: 3, borderLeftColor: theme.primary }}>
+                  <Ionicons name="chatbubble-outline" size={12} color={theme.textSecondary} style={{ marginRight: scale(6), marginTop: scale(1) }} />
+                  <Text style={{ fontSize: scale(11), color: theme.textSecondary, fontStyle: 'italic', flex: 1 }}>"{selectedExamForOptions.description}"</Text>
                 </View>
               )}
             </ScrollView>
 
             {/* Action Buttons */}
-            <View style={{ flexDirection: 'row', gap: scale(10), paddingTop: scale(12), borderTopWidth: 1, borderTopColor: theme.border }}>
-              <TouchableOpacity
-                onPress={() => { setShowOptionsModal(false); if (selectedExamForOptions) openModal(selectedExamForOptions); }}
-                style={{ flex: 1, paddingVertical: scale(13), backgroundColor: theme.primary, borderRadius: scale(10), flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}
-              >
-                <Ionicons name="create-outline" size={16} color={isDark ? theme.text : '#fff'} style={{ marginRight: scale(6) }} />
-                <Text style={{ color: '#fff', fontWeight: '700', fontSize: scale(14) }}>Edit</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => { setShowOptionsModal(false); if (selectedExamForOptions) handleDeleteExam(selectedExamForOptions.id); }}
-                style={{ flex: 1, paddingVertical: scale(13), backgroundColor: theme.error + '12', borderRadius: scale(10), flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: theme.error + '25' }}
-              >
-                <Ionicons name="trash-outline" size={16} color={theme.error} style={{ marginRight: scale(6) }} />
-                <Text style={{ color: theme.error, fontWeight: '700', fontSize: scale(14) }}>Delete</Text>
-              </TouchableOpacity>
-            </View>
+            {(() => {
+              const selOriginal = selectedExamForOptions;
+              let targetEditExam = selOriginal;
+              let targetDeleteId = selOriginal?.id;
+              
+              if (isTeacher && selOriginal) {
+                 const studentKey = (selOriginal.rollNo || selOriginal.studentName || '');
+                 const studentClass = selOriginal.studentClass || '';
+                 const sameTests = exams.filter(e => {
+                   return (e.rollNo || e.studentName || '') === studentKey && (e.studentClass || '') === studentClass && e.title === selOriginal.title && e.category === selOriginal.category;
+                 });
+                 const teacherDocs = sameTests.filter(e => {
+                   return typeof teacherSubjectsList !== 'undefined' && teacherSubjectsList.some(s => s.toLowerCase().trim() === (e.bookName || '').toLowerCase().trim());
+                 });
+                 if (teacherDocs.length > 0) {
+                   targetEditExam = teacherDocs[0];
+                   targetDeleteId = teacherDocs[0].id;
+                 }
+              }
+
+              return (
+                <View style={{ flexDirection: 'row', gap: scale(8), paddingTop: scale(10), marginTop: 'auto' }}>
+                  <TouchableOpacity
+                    onPress={() => { setShowOptionsModal(false); if (targetEditExam) openModal(targetEditExam); }}
+                    style={{ flex: 1, paddingVertical: scale(8), backgroundColor: theme.primary, borderRadius: scale(8), flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <Ionicons name="create-outline" size={14} color={isDark ? theme.text : '#fff'} style={{ marginRight: scale(4) }} />
+                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: scale(12) }}>Edit Record</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => { setShowOptionsModal(false); if (targetDeleteId) handleDeleteExam(targetDeleteId); }}
+                    style={{ flex: 1, paddingVertical: scale(8), backgroundColor: theme.error + '12', borderRadius: scale(8), flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: theme.error + '25' }}
+                  >
+                    <Ionicons name="trash-outline" size={14} color={theme.error} style={{ marginRight: scale(4) }} />
+                    <Text style={{ color: theme.error, fontWeight: '700', fontSize: scale(12) }}>Delete</Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            })()}
           </View>
         </View>
       </Modal>

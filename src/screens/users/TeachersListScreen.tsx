@@ -190,7 +190,7 @@ export const TeachersScreen: React.FC = () => {
         <Ionicons name="arrow-back" size={scale(22)} color="#ffffff" />
       </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={[styles.headerTitle, { color: '#fff' }]}>Staff Members</Text>
+          <Text style={[styles.headerTitle, { color: '#fff' }]} numberOfLines={1} adjustsFontSizeToFit>Staff Members</Text>
           <Text style={{ fontSize: scale(12), color: 'rgba(255,255,255,0.8)' }}>{staff.length} available</Text>
         </View>
         <TouchableOpacity style={[styles.backButton, { backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 8, padding: 4 }]} hitSlop={{top: 10, bottom: 10, left: 10, right: 10}} onPress={() => navigation.navigate('LikedTeachersScreen')}>

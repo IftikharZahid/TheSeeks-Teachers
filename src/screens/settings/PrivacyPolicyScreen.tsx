@@ -30,7 +30,7 @@ export const PrivacyPolicyScreen: React.FC = () => {
       >
         <Ionicons name="arrow-back" size={scale(22)} color="#ffffff" />
       </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: '#fff' }]}>Privacy & Policy</Text>
+        <Text style={[styles.headerTitle, { color: '#fff' }]} numberOfLines={1} adjustsFontSizeToFit>Privacy & Policy</Text>
         <View style={{ width: scale(36) }} />
       </View>
 

@@ -69,7 +69,7 @@ export const VideoGalleriesScreen: React.FC = () => {
       </TouchableOpacity>
 
         <View style={{ flex: 1 }}>
-          <Text style={[styles.headerTitle, { color: isDark ? theme.text : '#fff' }]}>{selectedClass ? `${selectedClass} Lectures` : 'Select Class'}</Text>
+          <Text style={[styles.headerTitle, { color: isDark ? theme.text : '#fff' }]} numberOfLines={1} adjustsFontSizeToFit>{selectedClass ? `${selectedClass} Lectures` : 'Select Class'}</Text>
           <Text style={[styles.headerSub, { color: isDark ? theme.textSecondary : 'rgba(255,255,255,0.8)' }]}>{selectedClass ? 'Educational video collections' : 'Choose a class to view subjects'}</Text>
         </View>
       </View>

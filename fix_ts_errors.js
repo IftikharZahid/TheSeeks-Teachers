@@ -1,25 +1,24 @@
 const fs = require('fs');
 const path = require('path');
 
-const files = [
-  'src/screens/academics/AttendanceClassesListScreen.tsx',
-  'src/screens/academics/ClassesListScreen.tsx',
-  'src/screens/academics/PastPapersScreen.tsx',
-  'src/screens/diary/ClassListDiaryScreen.tsx',
-  'src/screens/settings/ChangePasswordScreen.tsx',
-  'src/screens/users/LikedTeachersScreen.tsx',
-  'src/screens/users/TeacherDetailsScreen.tsx',
-  'src/screens/users/TeachersListScreen.tsx'
-];
+const screensDir = path.join(__dirname, 'src', 'screens', 'exams');
+const files = fs.readdirSync(screensDir).filter(f => f.endsWith('.tsx') && !f.includes('_backup'));
 
 files.forEach(file => {
-  const filePath = path.join('c:/Users/USER/Desktop/Mobile App Dev/TheSeeks Projects/TheSeeks-Teachers', file);
-  if (fs.existsSync(filePath)) {
+    const filePath = path.join(screensDir, file);
     let content = fs.readFileSync(filePath, 'utf8');
-    content = content.replace(/paddingTop:\s*StatusBar\.currentHeight\s*\|\|\s*0,\s*paddingTop:\s*StatusBar\.currentHeight\s*\|\|\s*0,/g, 'paddingTop: StatusBar.currentHeight || 0,');
+
+    // Fix 1: let allBooks = []; -> let allBooks: any[] = [];
+    content = content.replace(/let allBooks = \[\];/g, 'let allBooks: any[] = [];');
+
+    // Fix 2: parseFloat(e.totalMarks) -> parseFloat(e.totalMarks as string)
+    // Wait, the regex could be tricky, let's just use string replace.
+    content = content.replace(/parseFloat\(e\.totalMarks\)/g, "parseFloat((e.totalMarks || '0') as string)");
+    content = content.replace(/parseFloat\(e\.obtainedMarks\)/g, "parseFloat((e.obtainedMarks || '0') as string)");
+
+    // Fix 3: disabled prop: disabled={isTeacher && selectedExamForOptions && selectedExamForOptions.teacherId !== teacherId}
+    content = content.replace(/disabled=\{isTeacher && selectedExamForOptions && selectedExamForOptions\.teacherId !== teacherId\}/g, "disabled={!!(isTeacher && selectedExamForOptions && selectedExamForOptions.teacherId !== teacherId)}");
+
     fs.writeFileSync(filePath, content, 'utf8');
-    console.log(`Fixed ${file}`);
-  } else {
-    console.log(`Not found: ${file}`);
-  }
+    console.log(`Applied TS fixes to ${file}`);
 });

@@ -710,7 +710,7 @@ Made with ❤ by The Seeks Academy`;
       >
         <Ionicons name="arrow-back" size={scale(22)} color="#ffffff" />
       </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: '#fff' }]}>Students</Text>
+        <Text style={[styles.headerTitle, { color: '#fff' }]} numberOfLines={1} adjustsFontSizeToFit>Students</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(4) }}>
           <TouchableOpacity onPress={handleCopyExistingCredentials} style={styles.addButton}>
             <Ionicons name="copy-outline" size={20} color={theme.primary} />

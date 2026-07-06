@@ -112,7 +112,7 @@ export const SettingsScreen: React.FC = () => {
       >
         <Ionicons name="arrow-back" size={scale(22)} color="#ffffff" />
       </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: '#fff' }]}>Settings</Text>
+        <Text style={[styles.headerTitle, { color: '#fff' }]} numberOfLines={1} adjustsFontSizeToFit>Settings</Text>
         <TouchableOpacity
           style={[styles.backButton, { backgroundColor: 'rgba(255,255,255,0.2)' }]}
           onPress={() => setLogoutModalVisible(true)}

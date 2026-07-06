@@ -158,7 +158,7 @@ export const LibraryScreen: React.FC = () => {
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <Ionicons name="library" size={scale(26)} color={isDark ? theme.text : '#fff'} style={{ marginRight: scale(8) }} />
                 <View>
-                  <Text style={[styles.headerTitle, { color: isDark ? theme.text : '#fff' }]}>e-Library</Text>
+                  <Text style={[styles.headerTitle, { color: isDark ? theme.text : '#fff' }]} numberOfLines={1} adjustsFontSizeToFit>e-Library</Text>
                   <Text style={[styles.headerSub, { color: isDark ? theme.textSecondary : 'rgba(255,255,255,0.8)' }]}>Educational resources & materials</Text>
                 </View>
               </View>

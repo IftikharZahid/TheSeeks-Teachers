@@ -66,7 +66,7 @@ export const AttendanceClassesListScreen: React.FC = () => {
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={22} color="#ffffff" />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: '#ffffff' }]}>Manage Attendance</Text>
+        <Text style={[styles.headerTitle, { color: '#ffffff' }]} numberOfLines={1} adjustsFontSizeToFit>Manage Attendance</Text>
         <View style={[styles.totalStrengthBadge, { backgroundColor: 'rgba(255,255,255,0.15)', borderColor: 'rgba(255,255,255,0.3)' }]}>
           <Text style={[styles.totalStrengthText, { color: '#ffffff' }]}>
             {students.length} Total

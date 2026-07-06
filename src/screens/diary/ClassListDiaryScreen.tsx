@@ -88,7 +88,7 @@ export const DiaryScreen: React.FC = () => {
         </TouchableOpacity>
         
         <View style={{ alignItems: 'center' }}>
-          <Text style={[styles.headerTitle, { color: '#ffffff' }]}>Class Diary</Text>
+          <Text style={[styles.headerTitle, { color: '#ffffff' }]} numberOfLines={1} adjustsFontSizeToFit>Class Diary</Text>
           <View style={{ width: scale(24), height: scale(3), backgroundColor: '#ffffff', borderRadius: scale(2), marginTop: scale(4) }} />
         </View>
 

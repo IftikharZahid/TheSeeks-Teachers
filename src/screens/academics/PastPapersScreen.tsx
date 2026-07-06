@@ -33,7 +33,7 @@ export const PastPapersScreen: React.FC = () => {
       </TouchableOpacity>
 
         <View style={{ flex: 1 }}>
-          <Text style={[styles.headerTitle, { color: isDark ? theme.text : '#fff' }]}>Past Papers</Text>
+          <Text style={[styles.headerTitle, { color: isDark ? theme.text : '#fff' }]} numberOfLines={1} adjustsFontSizeToFit>Past Papers</Text>
           <Text style={[styles.headerSub, { color: isDark ? theme.textSecondary : 'rgba(255,255,255,0.8)' }]}>Coming soon</Text>
         </View>
       </View>

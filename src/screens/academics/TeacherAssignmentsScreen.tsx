@@ -161,7 +161,7 @@ export const TeacherAssignmentsScreen: React.FC = () => {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
           <Ionicons name="arrow-back" size={scale(22)} color="#ffffff" />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: '#ffffff' }]}>My Assignments</Text>
+        <Text style={[styles.headerTitle, { color: '#ffffff' }]} numberOfLines={1} adjustsFontSizeToFit>My Assignments</Text>
         <TouchableOpacity onPress={() => setShowModal(true)} style={styles.headerButton}>
           <Ionicons name="add-circle" size={scale(24)} color="#ffffff" />
         </TouchableOpacity>

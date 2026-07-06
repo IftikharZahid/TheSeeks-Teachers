@@ -464,9 +464,9 @@ export const TeacherDashboardScreen: React.FC = () => {
               style={styles.headerLogo}
               resizeMode="contain"
             />
-            <View style={{ justifyContent: 'center' }}>
-              <Text style={styles.headerTitle}>THE SEEKS ACADEMY</Text>
-              <Text style={styles.headerSubtitle}>FORT ABBAS</Text>
+            <View style={{ justifyContent: 'center', flexShrink: 1 }}>
+              <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>THE SEEKS ACADEMY</Text>
+              <Text style={styles.headerSubtitle} numberOfLines={1} adjustsFontSizeToFit>FORT ABBAS</Text>
             </View>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: scale(5) }}>
