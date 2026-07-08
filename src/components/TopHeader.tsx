@@ -60,7 +60,7 @@ export const TopHeader: React.FC = () => {
   const [showDropdown, setShowDropdown] = useState(false);
 
   // Fallback logic
-  const displayName = profile?.fullname || user?.displayName || 'Student';
+  const displayName = profile?.fullname || user?.displayName || 'Teacher';
   const displayImage = (profile?.image && profile.image.trim() !== '') ? profile.image : (user?.photoURL && user.photoURL.trim() !== '' ? user.photoURL : null);
 
   // Time-based academic greeting
