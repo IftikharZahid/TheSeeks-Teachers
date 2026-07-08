@@ -9,6 +9,8 @@ import {
     onSnapshot,
 } from 'firebase/firestore';
 import type { Dispatch } from '@reduxjs/toolkit';
+import { enqueueAction } from './syncSlice';
+import { processSyncQueue } from '../syncManager';
 
 // ── Types ──────────────────────────────────────────────
 
@@ -37,18 +39,38 @@ const initialState: ComplaintsState = {
 
 export const submitComplaint = createAsyncThunk(
     'complaints/submitComplaint',
-    async (payload: { subject: string; category: string; description: string }) => {
-        const user = auth.currentUser;
-        await addDoc(collection(db, 'complaints'), {
-            subject: payload.subject.trim(),
-            category: payload.category,
-            description: payload.description.trim(),
-            userId: user?.uid || 'anonymous',
-            userEmail: user?.email || 'anonymous',
-            userName: user?.displayName || 'Anonymous User',
-            status: 'Pending',
-            createdAt: serverTimestamp(),
-        });
+    async (payload: { subject: string; category: string; description: string }, { dispatch, rejectWithValue }) => {
+        try {
+            const user = auth.currentUser;
+            const complaintData = {
+                id: `complaint_${Date.now()}`,
+                subject: payload.subject.trim(),
+                category: payload.category,
+                description: payload.description.trim(),
+                userId: user?.uid || 'anonymous',
+                userEmail: user?.email || 'anonymous',
+                userName: user?.displayName || 'Anonymous User',
+                status: 'Pending',
+                createdAt: { seconds: Math.floor(Date.now() / 1000) }, // fake timestamp for local sorting
+            };
+
+            // Optimistic update locally
+            dispatch(complaintsSlice.actions.addComplaintOptimistic(complaintData as any));
+
+            // Queue for offline sync
+            dispatch(enqueueAction({
+                id: `submit_complaint_${Date.now()}`,
+                actionType: 'SUBMIT_COMPLAINT',
+                payload: complaintData,
+                timestamp: Date.now(),
+            }));
+
+            // @ts-ignore
+            dispatch(processSyncQueue());
+            return complaintData;
+        } catch (e: any) {
+            return rejectWithValue(e.message);
+        }
     }
 );
 
@@ -68,6 +90,12 @@ const complaintsSlice = createSlice({
         clearComplaints() {
             return initialState;
         },
+        addComplaintOptimistic(state, action: PayloadAction<Complaint>) {
+            // Avoid duplicates if listener fires
+            if (!state.myComplaints.find(c => c.id === action.payload.id)) {
+                state.myComplaints.unshift(action.payload);
+            }
+        }
     },
     extraReducers: (builder) => {
         builder

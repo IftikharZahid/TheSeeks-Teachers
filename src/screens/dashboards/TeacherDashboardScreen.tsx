@@ -562,7 +562,7 @@ export const TeacherDashboardScreen: React.FC = () => {
               {/* Drawer panel */}
               <View style={{
                 position: 'absolute', top: 0, bottom: 0, left: 0,
-                width: Math.min(width * 0.65, scale(220)), // Compact width similar to design
+                width: Math.min(width * 0.60, scale(200)), // Professional compact width
                 backgroundColor: theme.card,
                 borderTopRightRadius: scale(20),
                 borderBottomRightRadius: scale(20),
@@ -709,7 +709,7 @@ export const TeacherDashboardScreen: React.FC = () => {
                   </ScrollView>
 
                   {/* ── Logout footer ── */}
-                  <View style={{ paddingHorizontal: scale(14), paddingVertical: scale(10), borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.border }}>
+                  <View style={{ paddingHorizontal: scale(14), paddingTop: scale(10), paddingBottom: Math.max(insets.bottom, 0) + scale(15), borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: theme.border }}>
                     <TouchableOpacity
                       style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? '#ef444415' : '#fef2f2', borderRadius: scale(10), paddingVertical: scale(11), paddingHorizontal: scale(14), borderWidth: 1, borderColor: '#ef444430' }}
                       activeOpacity={0.75}

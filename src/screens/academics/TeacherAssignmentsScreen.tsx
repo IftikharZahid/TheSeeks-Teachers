@@ -8,7 +8,7 @@ import { scale } from '../../utils/responsive';
 import { collection, onSnapshot, doc, setDoc, deleteDoc, getDoc } from 'firebase/firestore';
 import { db } from '../../api/firebaseConfig';
 import { useAppSelector, useAppDispatch } from '../../store/hooks';
-import { fetchTeacherAssignments, fetchAvailableClasses, addAssignmentOptimistic, removeAssignmentOptimistic, setAvailableClasses } from '../../store/slices/assignmentsSlice';
+import { fetchTeacherAssignments, fetchAvailableClasses, saveAssignment, deleteAssignment, setAvailableClasses } from '../../store/slices/assignmentsSlice';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 export const TeacherAssignmentsScreen: React.FC = () => {
@@ -82,11 +82,9 @@ export const TeacherAssignmentsScreen: React.FC = () => {
         ...formData
       };
 
-      dispatch(addAssignmentOptimistic(assignmentData));
+      dispatch(saveAssignment(assignmentData));
       setShowModal(false);
       setFormData({ title: '', targetClass: '', subject: defaultSubject, deadline: '', description: '', audience: 'Both' });
-      // Save to Firestore in background
-      setDoc(doc(db, 'assignments', newId), assignmentData, { merge: true }).catch(e => console.log('Save assignment error:', e));
     } catch (e: any) {
       Alert.alert('Error', e.message);
     } finally {
@@ -101,8 +99,7 @@ export const TeacherAssignmentsScreen: React.FC = () => {
         text: 'Delete',
         style: 'destructive',
         onPress: () => {
-          dispatch(removeAssignmentOptimistic(id));
-          deleteDoc(doc(db, 'assignments', id)).catch(e => console.log('Delete assignment error:', e));
+          dispatch(deleteAssignment(id));
         }
       }
     ]);

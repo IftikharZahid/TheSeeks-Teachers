@@ -18,6 +18,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as Sharing from 'expo-sharing';
 import * as XLSX from 'xlsx';
 import * as FileSystem from 'expo-file-system/legacy';
+import { saveResult, deleteResult } from '../../store/slices/resultsSlice';
 import { useAppSelector, useAppDispatch } from '../../store/hooks';
 import type { AdminExam, AdminStudent } from '../../store/slices/adminSlice';
 import { initExamSettingsListener } from '../../store/slices/adminSlice';
@@ -349,7 +350,7 @@ const ExamRow = React.memo((
       <Text style={{ flex: 0.8, fontSize: scale(11), color: theme.textSecondary, textAlign: 'center' }} numberOfLines={1}>
         {student.studentClass || '—'}
       </Text>
-      <View style={{ flex: 0.6, alignItems: 'center' }}>
+      <View style={{ flex: 0.8, alignItems: 'center' }}>
         <Text style={{ fontSize: scale(11), fontWeight: '600', color: theme.text }}>
           {student.testCount}
         </Text>
@@ -632,20 +633,7 @@ export const Class1stYearExamsScreen: React.FC = () => {
     }
 
     const currentSubject = scopedEntryBooks.length > 0 ? scopedEntryBooks.map(b => b.name).join(', ') : (isTeacher && selectedTeacherSubject ? selectedTeacherSubject : (bookName || ''));
-    const isDuplicate = exams.some(exam => {
-      if (editingExam && exam.id === editingExam.id) return false;
-      return (
-        exam.title === title &&
-        exam.category === category &&
-        exam.rollNo === rollNo &&
-        exam.bookName === currentSubject
-      );
-    });
-
-    if (isDuplicate) {
-      Alert.alert('Duplicate Entry', 'An exam entry with these details already exists.');
-      return;
-    }
+    
 
     let computedStatus = 'Absent';
     let totalObtained = 0;
@@ -706,11 +694,11 @@ export const Class1stYearExamsScreen: React.FC = () => {
 
     try {
       if (editingExam) {
-        await setDoc(doc(db, 'exams', editingExam.id), examData, { merge: true });
+        await dispatch(saveResult({ examData: { ...examData, id: (editingExam as any)?.id ? (editingExam as any).id : (Date.now().toString()) } })).unwrap();
         Alert.alert('Success', 'Exam record updated successfully');
       } else {
         const newId = Date.now().toString();
-        await setDoc(doc(db, 'exams', newId), examData);
+        await dispatch(saveResult({ examData: { ...examData, id: (editingExam as any)?.id ? (editingExam as any).id : (Date.now().toString()) } })).unwrap();
         Alert.alert('Success', 'Exam record added successfully');
       }
       setModalVisible(false);
@@ -759,7 +747,7 @@ export const Class1stYearExamsScreen: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              await deleteDoc(doc(db, 'exams', id));
+              await dispatch(deleteResult({ id })).unwrap();
               Alert.alert('Success', 'Exam record deleted successfully');
             } catch (error) {
               Alert.alert('Error', 'Failed to delete exam record');
@@ -1130,7 +1118,7 @@ export const Class1stYearExamsScreen: React.FC = () => {
               examDoc.obtainedMarks = item.obtainedMarks?.toString() || '';
             }
 
-            await setDoc(doc(db, 'exams', docId), examDoc);
+            await dispatch(saveResult({ examData: { ...examDoc, id: docId } })).unwrap();
             addedCount++;
 
             const email = (item.studentEmail || '').trim().toLowerCase();
@@ -1302,11 +1290,12 @@ export const Class1stYearExamsScreen: React.FC = () => {
       const key = (e.rollNo || e.studentName || '') + '|' + (e.studentClass || '');
       const total = parseFloat(e.totalMarks || '0') || 0;
       const obtained = parseFloat(e.obtainedMarks || '0') || 0;
+      const subjectsInExam = (e.books && e.books.length > 0) ? e.books.length : (e.bookName && e.bookName.trim() !== '' ? e.bookName.split(',').length : 1);
       const existing = map.get(key);
       if (existing) {
         existing.totalMarks += total;
         existing.obtainedMarks += obtained;
-        existing.testCount += 1;
+        existing.testCount += subjectsInExam;
         if (e.title && !existing.tests.includes(e.title)) existing.tests.push(e.title);
       } else {
         map.set(key, {
@@ -1314,7 +1303,7 @@ export const Class1stYearExamsScreen: React.FC = () => {
           rollNo: e.rollNo || '',
           studentClass: e.studentClass || '',
           totalMarks: total, obtainedMarks: obtained,
-          testCount: 1, tests: e.title ? [e.title] : [],
+          testCount: subjectsInExam, tests: e.title ? [e.title] : [],
           latestExam: e,
         });
       }
@@ -1378,7 +1367,7 @@ export const Class1stYearExamsScreen: React.FC = () => {
           </View>
           <View style={styles.summaryTextBlock}>
             <Text style={[styles.summaryValue, { color: theme.text }]}>{totalTestsShown}</Text>
-            <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Tests</Text>
+            <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Subjects</Text>
           </View>
         </View>
         <View style={[styles.summaryTile, { backgroundColor: theme.card, borderColor: theme.border }]}>
@@ -1527,9 +1516,9 @@ export const Class1stYearExamsScreen: React.FC = () => {
             </Text>
           </View>
           <View style={[styles.tableHeader, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
-            <Text style={[styles.tableHeaderCell, { flex: 2.2, color: theme.textSecondary, fontSize: scale(8) }]}>STUDENT</Text>
+            <Text style={[styles.tableHeaderCell, { flex: 2.0, color: theme.textSecondary, fontSize: scale(8) }]}>STUDENT</Text>
             <Text style={[styles.tableHeaderCell, { flex: 0.8, textAlign: 'center', color: theme.textSecondary, fontSize: scale(8) }]}>CLASS</Text>
-            <Text style={[styles.tableHeaderCell, { flex: 0.6, textAlign: 'center', color: theme.textSecondary, fontSize: scale(8) }]}>TESTS</Text>
+            <Text style={[styles.tableHeaderCell, { flex: 0.8, textAlign: 'center', color: theme.textSecondary, fontSize: scale(8) }]}>SUBJECTS</Text>
             <Text style={[styles.tableHeaderCell, { flex: 0.7, textAlign: 'center', color: theme.textSecondary, fontSize: scale(8) }]}>MARKS</Text>
             <Text style={[styles.tableHeaderCell, { flex: 0.7, textAlign: 'right', color: theme.textSecondary, fontSize: scale(8) }]}>SCORE</Text>
           </View>
@@ -1607,7 +1596,7 @@ export const Class1stYearExamsScreen: React.FC = () => {
               <Text style={{ fontSize: scale(12), fontWeight: '700', color: '#fff' }}>{isSaving ? '...' : 'Save'}</Text>
               </TouchableOpacity>
             </View>
-            <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+            <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
               <ScrollView
               style={{ flex: 1 }}
               contentContainerStyle={{ padding: scale(12), paddingBottom: scale(30) }}
@@ -2370,107 +2359,37 @@ export const Class1stYearExamsScreen: React.FC = () => {
       {/* ══════════════════════════════════════════════════════════════════════
           RESULT DETAIL / OPTIONS MODAL
       ══════════════════════════════════════════════════════════════════════ */}
-      <Modal visible={showOptionsModal} transparent animationType="slide">
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' }}>
-          <View style={[{ borderTopLeftRadius: scale(20), borderTopRightRadius: scale(20), padding: scale(18), elevation: 5, height: '85%' }, { backgroundColor: theme.card }]}>
-
+      <Modal visible={showOptionsModal} transparent animationType="slide" statusBarTranslucent={true} onRequestClose={() => setShowOptionsModal(false)}>
+        <View style={{ flex: 1, backgroundColor: isDark ? theme.background : '#f8fafc' }}>
+          
+          {/* Header */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: scale(16), paddingTop: (StatusBar.currentHeight || 0) + scale(12), paddingBottom: scale(12), backgroundColor: theme.primary }}>
             <TouchableOpacity
+              style={{ width: scale(38), height: scale(38), borderRadius: scale(12), backgroundColor: isDark ? theme.border : 'rgba(255, 255, 255, 0.15)', justifyContent: 'center', alignItems: 'center', marginRight: scale(12) }}
+              activeOpacity={0.7}
               onPress={() => setShowOptionsModal(false)}
-              style={{ position: 'absolute', top: scale(14), right: scale(14), zIndex: 10, width: scale(32), height: scale(32), borderRadius: scale(16), backgroundColor: theme.background, alignItems: 'center', justifyContent: 'center' }}
             >
-              <Ionicons name="close" size={18} color={theme.textSecondary} />
+              <Ionicons name="arrow-back" size={scale(22)} color={isDark ? theme.text : '#ffffff'} />
             </TouchableOpacity>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: scale(17), fontWeight: '800', color: '#fff' }}>Student Record</Text>
+              <Text style={{ fontSize: scale(11), color: 'rgba(255,255,255,0.75)', marginTop: scale(1) }}>View or modify exam record</Text>
+            </View>
+          </View>
 
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: scale(12), paddingRight: scale(40) }}>
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: scale(16), paddingBottom: scale(40) }} showsVerticalScrollIndicator={false}>
+            {/* The avatar block */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: scale(16), padding: scale(12), backgroundColor: theme.card, borderRadius: scale(12), borderWidth: 1, borderColor: theme.border }}>
               <View style={{ width: scale(48), height: scale(48), borderRadius: scale(24), backgroundColor: theme.primary + '15', alignItems: 'center', justifyContent: 'center', marginRight: scale(12) }}>
-                <Ionicons name="person" size={22} color={theme.primary} />
+                <Ionicons name="person" size={24} color={theme.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: scale(18), fontWeight: '700', color: theme.text }}>{selectedExamForOptions?.studentName || 'Student'}</Text>
+                <Text style={{ fontSize: scale(18), fontWeight: '700', color: theme.text }} numberOfLines={1}>{selectedExamForOptions?.studentName || 'Student'}</Text>
                 <Text style={{ fontSize: scale(13), color: theme.textSecondary, marginTop: scale(2) }}>
-                  {selectedExamForOptions?.rollNo || 'N/A'} • {selectedExamForOptions?.studentClass || 'N/A'}
+                  ID: {selectedExamForOptions?.rollNo || 'N/A'} • {selectedExamForOptions?.studentClass || 'N/A'}
                 </Text>
               </View>
             </View>
-
-            {/* T-Navigation Buttons */}
-            {(() => {
-              if (!selectedExamForOptions) return null;
-              const studentKey = (selectedExamForOptions.rollNo || selectedExamForOptions.studentName || '');
-              const studentClass = selectedExamForOptions.studentClass || '';
-              const studentExams = exams.filter(e => {
-                const k = (e.rollNo || e.studentName || '');
-                return k === studentKey && (e.studentClass || '') === studentClass;
-              });
-              const existingTitles = new Set(studentExams.map(e => e.title));
-              const visibleTitles = dynamicTitleOptions;
-
-              return (
-                <View style={{ marginBottom: scale(10) }}>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    <View style={{ flexDirection: 'row', gap: scale(5) }}>
-                      {visibleTitles.map((t) => {
-                        const hasRecord = existingTitles.has(t);
-                        const isActive = selectedExamForOptions?.title === t;
-                        return (
-                          <TouchableOpacity
-                            key={t}
-                            onPress={() => {
-                              if (isActive) return;
-                              if (hasRecord) {
-                                const targetExam = studentExams.find(e => e.title === t);
-                                if (targetExam) setSelectedExamForOptions(targetExam);
-                              } else {
-                                setShowOptionsModal(false);
-                                resetForm();
-                                setStudentName(selectedExamForOptions.studentName || '');
-                                setRollNo(selectedExamForOptions.rollNo || '');
-                                setStudentClass(selectedExamForOptions.studentClass || '');
-                                setStudentEmail(selectedExamForOptions.studentEmail || '');
-                                setStudentSearchTerm(selectedExamForOptions.studentName || '');
-                                setTitle(t);
-                                setStudentInfoLocked(true);
-                                setModalVisible(true);
-                              }
-                            }}
-                            style={{
-                              paddingHorizontal: scale(12), paddingVertical: scale(6), borderRadius: scale(6),
-                              backgroundColor: isActive ? theme.primary : hasRecord ? theme.primary + '12' : theme.background,
-                              borderWidth: 1,
-                              borderColor: isActive ? theme.primary : hasRecord ? theme.primary + '30' : theme.border,
-                              minWidth: scale(40), alignItems: 'center',
-                            }}
-                          >
-                            <Text style={{ fontSize: scale(12), fontWeight: '700', color: isActive ? '#fff' : hasRecord ? theme.primary : theme.textSecondary }}>{t}</Text>
-                            {!hasRecord && <Ionicons name="add" size={9} color={theme.textSecondary} style={{ marginTop: scale(1) }} />}
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
-                  </ScrollView>
-                </View>
-              );
-            })()}
-
-            {/* Test & Date Badge */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: scale(12), gap: scale(8) }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.primary + '12', paddingHorizontal: scale(10), paddingVertical: scale(5), borderRadius: scale(6) }}>
-                <Ionicons name="document-text-outline" size={13} color={theme.primary} style={{ marginRight: scale(4) }} />
-                <Text style={{ fontSize: scale(12), fontWeight: '600', color: theme.primary }}>{selectedExamForOptions?.title}</Text>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.background, paddingHorizontal: scale(10), paddingVertical: scale(5), borderRadius: scale(6), borderWidth: 1, borderColor: theme.border }}>
-                <Ionicons name="folder-outline" size={13} color={theme.textSecondary} style={{ marginRight: scale(4) }} />
-                <Text style={{ fontSize: scale(12), color: theme.textSecondary }}>{selectedExamForOptions?.category}</Text>
-              </View>
-              {selectedExamForOptions?.date && (
-                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.background, paddingHorizontal: scale(10), paddingVertical: scale(5), borderRadius: scale(6), borderWidth: 1, borderColor: theme.border }}>
-                  <Ionicons name="calendar-outline" size={13} color={theme.textSecondary} style={{ marginRight: scale(4) }} />
-                  <Text style={{ fontSize: scale(12), color: theme.textSecondary }}>{selectedExamForOptions?.date}</Text>
-                </View>
-              )}
-            </View>
-
-            <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
               {/* Compact Stats Row */}
               {(() => {
                 const selOriginal = selectedExamForOptions;
@@ -2617,8 +2536,6 @@ export const Class1stYearExamsScreen: React.FC = () => {
                   <Text style={{ fontSize: scale(11), color: theme.textSecondary, fontStyle: 'italic', flex: 1 }}>"{selectedExamForOptions.description}"</Text>
                 </View>
               )}
-            </ScrollView>
-
             {/* Action Buttons */}
             {(() => {
               const selOriginal = selectedExamForOptions;
@@ -2641,7 +2558,7 @@ export const Class1stYearExamsScreen: React.FC = () => {
               }
 
               return (
-                <View style={{ flexDirection: 'row', gap: scale(8), paddingTop: scale(10), marginTop: 'auto' }}>
+                <View style={{ flexDirection: 'row', gap: scale(12), paddingTop: scale(10), marginTop: scale(20) }}>
                   <TouchableOpacity
                     onPress={() => { setShowOptionsModal(false); if (targetEditExam) openModal(targetEditExam); }}
                     style={{ flex: 1, paddingVertical: scale(8), backgroundColor: theme.primary, borderRadius: scale(8), flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}
@@ -2659,7 +2576,7 @@ export const Class1stYearExamsScreen: React.FC = () => {
                 </View>
               );
             })()}
-          </View>
+          </ScrollView>
         </View>
       </Modal>
     </View>

@@ -1,6 +1,8 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { db } from '../../api/firebaseConfig';
-import { collection, getDocs, doc, getDoc, query, where, orderBy } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, query, where, orderBy, setDoc, deleteDoc } from 'firebase/firestore';
+import { enqueueAction } from './syncSlice';
+import { processSyncQueue } from '../syncManager';
 
 interface AssignmentsState {
   assignments: any[];
@@ -61,6 +63,52 @@ export const fetchAvailableClasses = createAsyncThunk(
       return snap.data().list;
     }
     return [];
+  }
+);
+
+export const saveAssignment = createAsyncThunk(
+  'assignments/save',
+  async (assignmentData: any, { dispatch, rejectWithValue }) => {
+    try {
+      // Optimistic update locally
+      dispatch(assignmentsSlice.actions.addAssignmentOptimistic(assignmentData));
+
+      // Queue for offline sync
+      dispatch(enqueueAction({
+          id: `save_assignment_${assignmentData.id}_${Date.now()}`,
+          actionType: 'WRITE_ASSIGNMENT',
+          payload: { assignmentId: assignmentData.id, payload: assignmentData },
+          timestamp: Date.now(),
+      }));
+
+      // @ts-ignore
+      dispatch(processSyncQueue());
+      return assignmentData;
+    } catch (e: any) {
+      return rejectWithValue(e.message);
+    }
+  }
+);
+
+export const deleteAssignment = createAsyncThunk(
+  'assignments/delete',
+  async (id: string, { dispatch, rejectWithValue }) => {
+    try {
+      dispatch(assignmentsSlice.actions.removeAssignmentOptimistic(id));
+
+      dispatch(enqueueAction({
+          id: `delete_assignment_${id}_${Date.now()}`,
+          actionType: 'DELETE_ASSIGNMENT',
+          payload: { assignmentId: id },
+          timestamp: Date.now(),
+      }));
+
+      // @ts-ignore
+      dispatch(processSyncQueue());
+      return id;
+    } catch (e: any) {
+      return rejectWithValue(e.message);
+    }
   }
 );
 

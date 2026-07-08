@@ -17,11 +17,12 @@ import timetableReducer from './slices/timetableSlice';
 import subjectsReducer from './slices/subjectsSlice';
 import assignmentsReducer from './slices/assignmentsSlice';
 import appSettingsReducer from './slices/appSettingsSlice';
+import syncReducer from './slices/syncSlice';
 
 const persistConfig = {
     key: 'root',
     storage: AsyncStorage,
-    whitelist: ['auth', 'videos', 'theme', 'admin', 'notifications'], // Only persist these slices
+    whitelist: ['auth', 'videos', 'theme', 'admin', 'notifications', 'sync'], // Only persist these slices
 };
 
 const rootReducer = combineReducers({
@@ -41,6 +42,7 @@ const rootReducer = combineReducers({
     subjects: subjectsReducer,
     assignments: assignmentsReducer,
         appSettings: appSettingsReducer,
+    sync: syncReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

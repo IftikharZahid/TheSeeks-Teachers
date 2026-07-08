@@ -7,7 +7,9 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { scale } from '../../utils/responsive';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../api/firebaseConfig';
-import { useAppSelector } from '../../store/hooks';
+import { useAppSelector, useAppDispatch } from '../../store/hooks';
+import { enqueueAction } from '../../store/slices/syncSlice';
+import { processSyncQueue } from '../../store/syncManager';
 
 export const TeacherSuggestionsScreen: React.FC = () => {
   const { theme, isDark } = useTheme();
@@ -16,6 +18,7 @@ export const TeacherSuggestionsScreen: React.FC = () => {
   
   const profileData = useAppSelector(s => s.auth.profile);
   const user = useAppSelector(s => s.auth.user);
+  const dispatch = useAppDispatch();
 
   const [title, setTitle] = useState('');
   const [suggestion, setSuggestion] = useState('');
@@ -31,18 +34,28 @@ export const TeacherSuggestionsScreen: React.FC = () => {
     
     setIsSubmitting(true);
     try {
-      await addDoc(collection(db, 'suggestions'), {
+      const suggestionData = {
+        id: `suggestion_${Date.now()}`,
         title: title.trim(),
         suggestion: suggestion.trim(),
         teacherId: user?.uid || 'unknown',
         teacherName: profileData?.fullname || user?.displayName || 'Unknown Teacher',
         status: 'pending',
-        createdAt: serverTimestamp(),
-      });
-      
+      };
+
+      dispatch(enqueueAction({
+        id: `submit_suggestion_${Date.now()}`,
+        actionType: 'SUBMIT_SUGGESTION',
+        payload: suggestionData,
+        timestamp: Date.now(),
+      }));
+
+      // @ts-ignore
+      dispatch(processSyncQueue());
+
       Alert.alert(
-        'Thank You!',
-        'Your suggestion has been successfully submitted to the management.',
+        'Success',
+        'Your suggestion has been queued for submission.',
         [{ text: 'OK', onPress: () => navigation.goBack() }]
       );
     } catch (error) {

@@ -1,6 +1,8 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { db } from '../../api/firebaseConfig';
-import { collection, query, orderBy, onSnapshot, Timestamp, limit, doc, getDoc, where, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, Timestamp, limit, doc, getDoc, where, getDocs, updateDoc, deleteDoc, addDoc, setDoc } from 'firebase/firestore';
+import { enqueueAction } from './syncSlice';
+import { processSyncQueue } from '../syncManager';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Dispatch } from '@reduxjs/toolkit';
 
@@ -118,6 +120,85 @@ export const fetchTodayMessageCount = createAsyncThunk(
     }
 );
 
+export const sendMessage = createAsyncThunk(
+    'messages/send',
+    async (payload: { groupId: string; message: SerializableMessage }, { dispatch, rejectWithValue }) => {
+        try {
+            const { groupId, message } = payload;
+            
+            // Optimistic update locally
+            dispatch(messagesSlice.actions.addMessage(message));
+            dispatch(messagesSlice.actions.incrementTodayMsgCount());
+
+            // Queue for offline sync
+            dispatch(enqueueAction({
+                id: `send_msg_${message.id}_${Date.now()}`,
+                actionType: 'SEND_MESSAGE',
+                payload: { groupId, messageId: message.id, payload: message },
+                timestamp: Date.now(),
+            }));
+
+            // @ts-ignore
+            dispatch(processSyncQueue());
+            return message;
+        } catch (e: any) {
+            return rejectWithValue(e.message);
+        }
+    }
+);
+
+export const deleteMessage = createAsyncThunk(
+    'messages/delete',
+    async (payload: { groupId: string; messageId: string }, { dispatch, rejectWithValue }) => {
+        try {
+            const { groupId, messageId } = payload;
+
+            // Optimistic local update
+            dispatch(messagesSlice.actions.removeMessage(messageId));
+
+            // Queue for offline sync
+            dispatch(enqueueAction({
+                id: `delete_msg_${messageId}_${Date.now()}`,
+                actionType: 'DELETE_MESSAGE',
+                payload: { groupId, messageId },
+                timestamp: Date.now(),
+            }));
+
+            // @ts-ignore
+            dispatch(processSyncQueue());
+            return messageId;
+        } catch (e: any) {
+            return rejectWithValue(e.message);
+        }
+    }
+);
+
+export const editMessage = createAsyncThunk(
+    'messages/edit',
+    async (payload: { groupId: string; messageId: string; text: string }, { dispatch, rejectWithValue }) => {
+        try {
+            const { groupId, messageId, text } = payload;
+
+            // Optimistic local update
+            dispatch(messagesSlice.actions.updateMessageText({ messageId, text }));
+
+            // Queue for offline sync
+            dispatch(enqueueAction({
+                id: `edit_msg_${messageId}_${Date.now()}`,
+                actionType: 'EDIT_MESSAGE',
+                payload: { groupId, messageId, payload: { text } },
+                timestamp: Date.now(),
+            }));
+
+            // @ts-ignore
+            dispatch(processSyncQueue());
+            return { messageId, text };
+        } catch (e: any) {
+            return rejectWithValue(e.message);
+        }
+    }
+);
+
 // ── Slice ──────────────────────────────────────────────
 const messagesSlice = createSlice({
     name: 'messages',
@@ -131,7 +212,19 @@ const messagesSlice = createSlice({
             state.isLoading = action.payload;
         },
         addMessage(state, action: PayloadAction<SerializableMessage>) {
-            state.list.push(action.payload);
+            // only add if not exists
+            if (!state.list.find(m => m.id === action.payload.id)) {
+                state.list.push(action.payload);
+            }
+        },
+        removeMessage(state, action: PayloadAction<string>) {
+            state.list = state.list.filter(m => m.id !== action.payload);
+        },
+        updateMessageText(state, action: PayloadAction<{messageId: string; text: string}>) {
+            const index = state.list.findIndex(m => m.id === action.payload.messageId);
+            if (index !== -1) {
+                state.list[index].text = action.payload.text;
+            }
         },
         clearMessages(state) {
             state.list = [];
@@ -164,7 +257,7 @@ export const selectUnreadMessagesCount = (state: any) => {
     return list.filter((m: SerializableMessage) => m.createdAtMs > lastReadTimestampMs).length;
 };
 
-export const { setMessages, setLoading, addMessage, clearMessages, incrementTodayMsgCount } = messagesSlice.actions;
+export const { setMessages, setLoading, addMessage, removeMessage, updateMessageText, clearMessages, incrementTodayMsgCount } = messagesSlice.actions;
 export default messagesSlice.reducer;
 
 // ── Firebase Listener ─────────────────────────────────

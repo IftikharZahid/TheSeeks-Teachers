@@ -9,7 +9,7 @@ import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/nativ
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { useAppSelector, useAppDispatch } from '../../store/hooks';
-import { updateLastReadTimestamp, fetchMessagingSettings, fetchTodayMessageCount, incrementTodayMsgCount } from '../../store/slices/messagesSlice';
+import { sendMessage, editMessage, deleteMessage, updateLastReadTimestamp, fetchMessagingSettings, fetchTodayMessageCount, incrementTodayMsgCount } from '../../store/slices/messagesSlice';
 import { scale } from '../../utils/responsive';
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, limit, doc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
 import { db, auth } from '../../api/firebaseConfig';

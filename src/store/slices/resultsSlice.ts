@@ -1,6 +1,8 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { db } from '../../api/firebaseConfig';
-import { collection, query, where, getDocs, orderBy, or } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, or, doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { enqueueAction } from './syncSlice';
+import { processSyncQueue } from '../syncManager';
 
 // ── Types ──────────────────────────────────────────────
 export interface BookEntry {
@@ -120,6 +122,64 @@ export const fetchResults = createAsyncThunk(
     }
 );
 
+export const saveResult = createAsyncThunk(
+    'results/save',
+    async (payload: { examData: ExamEntry }, { dispatch, rejectWithValue }) => {
+        try {
+            const { examData } = payload;
+            
+            // Generate ID if missing (simplistic approach for offline queue)
+            const id = examData.id || `exam_${Date.now()}`;
+            const finalData = { ...examData, id };
+
+            // Optimistic update locally
+            dispatch(resultsSlice.actions.addOrUpdateResult(finalData));
+
+            // Queue for offline sync
+            dispatch(enqueueAction({
+                id: `save_exam_${id}_${Date.now()}`,
+                actionType: 'WRITE_RESULT',
+                payload: { resultId: id, payload: finalData },
+                timestamp: Date.now(),
+            }));
+
+            // @ts-ignore
+            dispatch(processSyncQueue());
+
+            return finalData;
+        } catch (error: any) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
+export const deleteResult = createAsyncThunk(
+    'results/delete',
+    async (payload: { id: string }, { dispatch, rejectWithValue }) => {
+        try {
+            const { id } = payload;
+            
+            // Optimistic update locally
+            dispatch(resultsSlice.actions.removeResult(id));
+
+            // Queue for offline sync
+            dispatch(enqueueAction({
+                id: `delete_exam_${id}_${Date.now()}`,
+                actionType: 'DELETE_RESULT',
+                payload: { resultId: id },
+                timestamp: Date.now(),
+            }));
+
+            // @ts-ignore
+            dispatch(processSyncQueue());
+
+            return id;
+        } catch (error: any) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
 // ── Slice ──────────────────────────────────────────────
 const resultsSlice = createSlice({
     name: 'results',
@@ -128,6 +188,17 @@ const resultsSlice = createSlice({
         clearResults(state) {
             state.list = [];
             state.error = null;
+        },
+        addOrUpdateResult(state, action) {
+            const index = state.list.findIndex(r => r.id === action.payload.id);
+            if (index !== -1) {
+                state.list[index] = action.payload;
+            } else {
+                state.list.unshift(action.payload); // Add to top
+            }
+        },
+        removeResult(state, action) {
+            state.list = state.list.filter(r => r.id !== action.payload);
         },
     },
     extraReducers: (builder) => {
@@ -147,5 +218,5 @@ const resultsSlice = createSlice({
     },
 });
 
-export const { clearResults } = resultsSlice.actions;
+export const { clearResults, addOrUpdateResult, removeResult } = resultsSlice.actions;
 export default resultsSlice.reducer;

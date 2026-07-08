@@ -2,6 +2,8 @@ import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { db } from '../../api/firebaseConfig';
 import { doc, getDoc, setDoc, onSnapshot, collection, getDocs } from 'firebase/firestore';
 import type { Dispatch } from '@reduxjs/toolkit';
+import { enqueueAction } from './syncSlice';
+import { processSyncQueue } from '../syncManager';
 
 // ── Types ──────────────────────────────────────────────
 export type AttendanceStatus = 'present' | 'absent' | 'late' | 'holiday' | 'pending';
@@ -116,7 +118,7 @@ export const fetchAttendance = createAsyncThunk(
 
 export const writeStudentAttendance = createAsyncThunk(
     'attendance/writeStudent',
-    async (payload: { studentId: string }, { getState, rejectWithValue }) => {
+    async (payload: { studentId: string }, { getState, rejectWithValue, dispatch }) => {
         try {
             const { studentId } = payload;
             const state: any = getState();
@@ -129,14 +131,27 @@ export const writeStudentAttendance = createAsyncThunk(
                 else if (st === 'late') late++;
             });
             const total = present + absent + late;
-            await setDoc(doc(db, 'attendance', studentId), {
+            
+            const payloadData = {
                 dailyRecords,
                 totalPresent: present,
                 totalAbsent:  absent,
                 totalLate:    late,
                 totalDays:    total,
                 percentage:   total > 0 ? Math.round(present / total * 100) : 0,
-            }, { merge: true });
+            };
+
+            dispatch(enqueueAction({
+                id: `attendance_${studentId}_${Date.now()}`,
+                actionType: 'WRITE_ATTENDANCE',
+                payload: { studentId, payload: payloadData },
+                timestamp: Date.now(),
+            }));
+
+            // Try to sync immediately if online
+            // @ts-ignore
+            dispatch(processSyncQueue());
+
             return { studentId };
         } catch (error: any) {
             return rejectWithValue(error.message || 'Failed to write attendance');

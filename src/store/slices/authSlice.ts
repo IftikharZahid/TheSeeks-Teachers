@@ -19,6 +19,8 @@ export interface UserProfile {
     gender?: string;
     subject?: string;
     subjects?: string[];
+    qualification?: string;
+    experience?: string;
 }
 
 // We can't store Firebase User directly (not serializable), so we extract what we need
@@ -186,7 +188,12 @@ const authSlice = createSlice({
                 state.error = null;
             })
             .addCase(fetchUserProfile.fulfilled, (state, action) => {
+                const currentImage = state.profile?.image;
                 state.profile = action.payload;
+                // Preserve local image if it was picked locally
+                if (currentImage && (currentImage.startsWith('file://') || currentImage.startsWith('data:'))) {
+                    state.profile.image = currentImage;
+                }
                 state.profileLoading = false;
             })
             .addCase(fetchUserProfile.rejected, (state, action) => {
@@ -207,24 +214,30 @@ export default authSlice.reducer;
 export const initAuthListener = (dispatch: ThunkDispatch<any, any, UnknownAction>) => {
     return onAuthStateChanged(auth, async (firebaseUser: User | null) => {
         if (firebaseUser) {
-            const actionResult = await dispatch(fetchUserProfile({ uid: firebaseUser.uid, email: firebaseUser.email }));
-            if (fetchUserProfile.fulfilled.match(actionResult)) {
-                const serializable: SerializableUser = {
-                    uid: firebaseUser.uid,
-                    email: firebaseUser.email,
-                    displayName: firebaseUser.displayName,
-                    photoURL: firebaseUser.photoURL,
-                };
-                dispatch(setUser(serializable));
-                // Load liked teachers so StaffInfoScreen has instant access
-                const { fetchLikedTeacherIds } = require('./teachersSlice');
-                dispatch(fetchLikedTeacherIds(firebaseUser.uid));
-            } else {
-                // Profile not found - User was likely deleted from dashboard
-                const { signOut } = require('firebase/auth');
-                await signOut(auth);
-                dispatch(setUser(null));
-                dispatch(clearAuth());
+            // Check if we already have a persisted user
+            const serializable: SerializableUser = {
+                uid: firebaseUser.uid,
+                email: firebaseUser.email,
+                displayName: firebaseUser.displayName,
+                photoURL: firebaseUser.photoURL,
+            };
+            dispatch(setUser(serializable));
+
+            try {
+                const actionResult = await dispatch(fetchUserProfile({ uid: firebaseUser.uid, email: firebaseUser.email }));
+                if (fetchUserProfile.fulfilled.match(actionResult)) {
+                    // Load liked teachers so StaffInfoScreen has instant access
+                    const { fetchLikedTeacherIds } = require('./teachersSlice');
+                    dispatch(fetchLikedTeacherIds(firebaseUser.uid));
+                } else if (actionResult.payload === 'User profile not found') {
+                    // Only sign out if we specifically determined the profile was deleted, not on network error
+                    const { signOut } = require('firebase/auth');
+                    await signOut(auth);
+                    dispatch(setUser(null));
+                    dispatch(clearAuth());
+                }
+            } catch (err) {
+                console.warn('Offline or error fetching profile, continuing with cached profile', err);
             }
         } else {
             dispatch(setUser(null));

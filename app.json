@@ -2,7 +2,7 @@
   "expo": {
     "name": "Teacher App",
     "slug": "teacher-app",
-    "version": "1.0.1",
+    "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -16,7 +16,7 @@
     },
     "android": {
       "package": "com.theseeksacademy.teachers",
-      "versionCode": 2,
+      "versionCode": 4,
       "splash": {
         "image": "./assets/splash-icon.png",
         "resizeMode": "contain",
@@ -37,6 +37,17 @@
       "eas": {
         "projectId": "90eee9c8-c3f2-4149-a2a1-1d628933b323"
       }
-    }
+    },
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableProguardInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true
+          }
+        }
+      ]
+    ]
   }
 }

@@ -15,6 +15,7 @@ import { initTeachersListener } from './src/store/slices/teachersSlice';
 import { initNotificationsListener } from './src/store/slices/notificationsSlice';
 import { initVideoGalleriesListener, initLikedVideosListener } from './src/store/slices/videosSlice';
 import { initMessagesListener, loadLastReadTimestamp } from './src/store/slices/messagesSlice';
+import { initSyncListener } from './src/store/syncManager';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { Audio } from 'expo-av';
 
@@ -49,6 +50,7 @@ function AppContent() {
     const unsubTeachers = initTeachersListener(dispatch);
     const unsubNotifications = initNotificationsListener(dispatch);
     const unsubGalleries = initVideoGalleriesListener(dispatch);
+    const unsubSync = initSyncListener(dispatch);
 
     return () => {
       unsubAuth();
@@ -56,6 +58,7 @@ function AppContent() {
       unsubTeachers();
       unsubNotifications();
       unsubGalleries();
+      unsubSync();
     };
   }, [dispatch]);
 

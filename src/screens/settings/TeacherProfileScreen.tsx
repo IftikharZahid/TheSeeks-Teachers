@@ -4,7 +4,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
-import { useAppSelector } from '../../store/hooks';
+import { useAppSelector, useAppDispatch } from '../../store/hooks';
+import { setProfile } from '../../store/slices/authSlice';
+import { enqueueAction } from '../../store/slices/syncSlice';
+import { processSyncQueue } from '../../store/syncManager';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
+import { TextInput } from 'react-native';
 import { scale } from '../../utils/responsive';
 import { TeacherProfileBanner } from '../../components/TeacherProfileBanner';
 import { signOut } from 'firebase/auth';
@@ -15,6 +21,79 @@ export const ProfileScreen: React.FC = () => {
   const [logoutModalVisible, setLogoutModalVisible] = React.useState(false);
   const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
+
+  const dispatch = useAppDispatch();
+  const [editModalVisible, setEditModalVisible] = React.useState(false);
+  const [editName, setEditName] = React.useState('');
+  const [editPhone, setEditPhone] = React.useState('');
+  const [editQualification, setEditQualification] = React.useState('');
+  const [editExperience, setEditExperience] = React.useState('');
+  const [editImage, setEditImage] = React.useState<string | null>(null);
+
+  const openEditModal = () => {
+    setEditName(displayName);
+    setEditPhone(displayPhone !== 'N/A' ? displayPhone : '');
+    setEditQualification(displayQualification !== 'N/A' ? displayQualification : '');
+    setEditExperience(displayExperience !== 'N/A' ? displayExperience : '');
+    setEditImage(displayImage);
+    setEditModalVisible(true);
+  };
+
+  const pickImage = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'image/*',
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled === false && result.assets && result.assets.length > 0) {
+        const fileUri = result.assets[0].uri;
+        // Convert to base64 so we can upload it to Firestore
+        const base64Data = await FileSystem.readAsStringAsync(fileUri, { encoding: 'base64' });
+        const mimeType = result.assets[0].mimeType || 'image/jpeg';
+        const imageStr = `data:${mimeType};base64,${base64Data}`;
+        setEditImage(imageStr);
+      }
+    } catch (e) {
+      console.warn('Image pick error:', e);
+    }
+  };
+
+  const saveProfile = async () => {
+    setEditModalVisible(false);
+    if (!profileData) return;
+
+    // Create an optimistic profile
+    const updatedProfile = {
+      ...profileData,
+      fullname: editName.trim() || profileData.fullname,
+      name: editName.trim() || profileData.fullname,
+      phone: editPhone.trim(),
+      qualification: editQualification.trim(),
+      experience: editExperience.trim(),
+      image: editImage || profileData.image,
+    };
+
+    // 1. Instantly update UI and Redux
+    dispatch(setProfile(updatedProfile));
+
+    // 2. Queue for Firebase (include the image now, since it's base64)
+    const payloadForSync = {
+      ...updatedProfile,
+    };
+
+    dispatch(enqueueAction({
+      id: `update_profile_${Date.now()}`,
+      actionType: 'UPDATE_PROFILE',
+      payload: { uid: profileData.uid || profileData.id, payload: payloadForSync },
+      timestamp: Date.now(),
+    }));
+
+    // @ts-ignore
+    dispatch(processSyncQueue());
+
+    Alert.alert('Success', 'Profile updated successfully.');
+  };
+
   
   const profileData = useAppSelector((s: any) => s.auth.profile);
   const user = useAppSelector((s: any) => s.auth.user);
@@ -25,15 +104,15 @@ export const ProfileScreen: React.FC = () => {
     return teachersList.find((t: any) => t.id === profileData.uid || t.id === profileData.id || (t.email && profileData.email && t.email === profileData.email) || (t.name && profileData.fullname && t.name === profileData.fullname)) || profileData;
   }, [profileData, teachersList]);
 
-  const displayName = currentTeacher?.name || currentTeacher?.fullname || user?.displayName || 'Teacher';
-  const displayEmail = currentTeacher?.email || user?.email || 'N/A';
-  const displayRole = currentTeacher?.role ? currentTeacher.role.charAt(0).toUpperCase() + currentTeacher.role.slice(1) : 'Teacher';
+  const displayName = profileData?.fullname || currentTeacher?.name || currentTeacher?.fullname || user?.displayName || 'Teacher';
+  const displayEmail = profileData?.email || currentTeacher?.email || user?.email || 'N/A';
+  const displayRole = profileData?.role || currentTeacher?.role ? (profileData?.role || currentTeacher.role).charAt(0).toUpperCase() + (profileData?.role || currentTeacher.role).slice(1) : 'Teacher';
   
-  const displaySubject = (currentTeacher?.subjects && currentTeacher.subjects.length > 0) ? currentTeacher.subjects.join(', ') : (currentTeacher?.subject ? currentTeacher.subject.split(',').map((s: string) => s.trim()).filter(Boolean).join(', ') : 'N/A');
-  const displayQualification = currentTeacher?.qualification || 'N/A';
-  const displayExperience = currentTeacher?.experience || 'N/A';
-  const displayPhone = currentTeacher?.phone || 'N/A';
-  const displayImage = currentTeacher?.image?.trim() ? currentTeacher.image : user?.photoURL?.trim() ? user.photoURL : null;
+  const displaySubject = profileData?.subject || ((currentTeacher?.subjects && currentTeacher.subjects.length > 0) ? currentTeacher.subjects.join(', ') : (currentTeacher?.subject ? currentTeacher.subject.split(',').map((s: string) => s.trim()).filter(Boolean).join(', ') : 'N/A'));
+  const displayQualification = profileData?.qualification || currentTeacher?.qualification || 'N/A';
+  const displayExperience = profileData?.experience || currentTeacher?.experience || 'N/A';
+  const displayPhone = profileData?.phone || currentTeacher?.phone || 'N/A';
+  const displayImage = profileData?.image?.trim() ? profileData.image : currentTeacher?.image?.trim() ? currentTeacher.image : user?.photoURL?.trim() ? user.photoURL : null;
 
   const confirmLogout = async () => {
     setLogoutModalVisible(false);
@@ -78,9 +157,14 @@ export const ProfileScreen: React.FC = () => {
         <Ionicons name="arrow-back" size={scale(22)} color="#ffffff" />
       </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: '#fff' }]} numberOfLines={1} adjustsFontSizeToFit>My Profile</Text>
-        <TouchableOpacity style={[styles.backButton, { backgroundColor: 'rgba(255,255,255,0.2)' }]} onPress={() => setLogoutModalVisible(true)}>
-          <Ionicons name="log-out-outline" size={scale(20)} color="#fff" />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: scale(8) }}>
+          <TouchableOpacity style={[styles.backButton, { backgroundColor: 'rgba(255,255,255,0.2)' }]} onPress={openEditModal}>
+            <Ionicons name="pencil" size={scale(18)} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.backButton, { backgroundColor: 'rgba(255,255,255,0.2)' }]} onPress={() => setLogoutModalVisible(true)}>
+            <Ionicons name="log-out-outline" size={scale(20)} color="#fff" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -149,6 +233,86 @@ export const ProfileScreen: React.FC = () => {
                 activeOpacity={0.7}
               >
                 <Text style={[styles.modalButtonText, { color: '#fff' }]}>Log Out</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Edit Profile Modal */}
+      <Modal
+        visible={editModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setEditModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: theme.card, width: '90%', maxWidth: scale(340) }]}>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>Edit Profile</Text>
+            <ScrollView style={{ width: '100%', maxHeight: scale(400) }} showsVerticalScrollIndicator={false}>
+              
+              <TouchableOpacity onPress={pickImage} style={{ alignSelf: 'center', marginVertical: scale(10) }}>
+                <Image
+                  source={editImage ? { uri: editImage } : require('../../../assets/icon.png')}
+                  style={{ width: scale(80), height: scale(80), borderRadius: scale(40), backgroundColor: '#eee' }}
+                />
+                <View style={{ position: 'absolute', bottom: 0, right: 0, backgroundColor: theme.primary, borderRadius: scale(12), padding: scale(4) }}>
+                  <Ionicons name="camera" size={scale(16)} color="#fff" />
+                </View>
+              </TouchableOpacity>
+
+              <Text style={{ color: theme.textSecondary, fontSize: scale(12), marginBottom: scale(4) }}>Full Name</Text>
+              <TextInput
+                style={{ backgroundColor: theme.backgroundSecondary, color: theme.text, borderRadius: scale(8), padding: scale(10), marginBottom: scale(12) }}
+                value={editName}
+                onChangeText={setEditName}
+                placeholder="Full Name"
+                placeholderTextColor={theme.textTertiary}
+              />
+
+              <Text style={{ color: theme.textSecondary, fontSize: scale(12), marginBottom: scale(4) }}>Phone Number</Text>
+              <TextInput
+                style={{ backgroundColor: theme.backgroundSecondary, color: theme.text, borderRadius: scale(8), padding: scale(10), marginBottom: scale(12) }}
+                value={editPhone}
+                onChangeText={setEditPhone}
+                placeholder="Phone Number"
+                keyboardType="phone-pad"
+                placeholderTextColor={theme.textTertiary}
+              />
+
+              <Text style={{ color: theme.textSecondary, fontSize: scale(12), marginBottom: scale(4) }}>Qualification</Text>
+              <TextInput
+                style={{ backgroundColor: theme.backgroundSecondary, color: theme.text, borderRadius: scale(8), padding: scale(10), marginBottom: scale(12) }}
+                value={editQualification}
+                onChangeText={setEditQualification}
+                placeholder="e.g., M.Sc Mathematics"
+                placeholderTextColor={theme.textTertiary}
+              />
+
+              <Text style={{ color: theme.textSecondary, fontSize: scale(12), marginBottom: scale(4) }}>Experience</Text>
+              <TextInput
+                style={{ backgroundColor: theme.backgroundSecondary, color: theme.text, borderRadius: scale(8), padding: scale(10), marginBottom: scale(20) }}
+                value={editExperience}
+                onChangeText={setEditExperience}
+                placeholder="e.g., 5 Years"
+                placeholderTextColor={theme.textTertiary}
+              />
+            </ScrollView>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: theme.backgroundSecondary }]}
+                onPress={() => setEditModalVisible(false)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.modalButtonText, { color: theme.text }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: theme.primary }]}
+                onPress={saveProfile}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.modalButtonText, { color: '#fff' }]}>Save</Text>
               </TouchableOpacity>
             </View>
           </View>

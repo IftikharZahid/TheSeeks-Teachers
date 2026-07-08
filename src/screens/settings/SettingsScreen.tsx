@@ -75,6 +75,7 @@ export const SettingsScreen: React.FC = () => {
 
 
   const accountItems = [
+    { icon: 'person', color: '#3b82f6', title: 'Personal Details', screen: 'ProfileScreen' },
     { icon: 'key', color: '#8b5cf6', title: 'Change Password', screen: 'ChangePasswordScreen' },
     { icon: 'finger-print', color: '#10b981', title: 'Biometric Login' },
   ];

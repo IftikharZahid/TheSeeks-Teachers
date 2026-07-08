@@ -28,7 +28,7 @@ export const AboutScreen: React.FC = () => {
           width: scale(38), 
           height: scale(38), 
           borderRadius: scale(12), 
-          backgroundColor: 'rgba(255, 255, 255, 0.15)', 
+          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.05)', 
           justifyContent: 'center', 
           alignItems: 'center', 
           marginRight: scale(12) 
@@ -36,7 +36,7 @@ export const AboutScreen: React.FC = () => {
         activeOpacity={0.7}
         onPress={() => navigation.goBack()}
       >
-        <Ionicons name="arrow-back" size={scale(22)} color="#ffffff" />
+        <Ionicons name="arrow-back" size={scale(22)} color={theme.text} />
       </TouchableOpacity>
 
         <View style={styles.titleCenter}>
@@ -66,7 +66,7 @@ export const AboutScreen: React.FC = () => {
           <View style={styles.heroStatsRow}>
             <View style={styles.heroStat}>
               <Ionicons name="cube" size={scale(14)} color="rgba(255,255,255,0.9)" />
-              <Text style={styles.heroStatValue}>v1.0.1</Text>
+              <Text style={styles.heroStatValue}>v1.0.3</Text>
               <Text style={styles.heroStatLabel}>Version</Text>
             </View>
             <View style={styles.heroStatDivider} />

@@ -2,6 +2,8 @@ import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { db } from '../../api/firebaseConfig';
 import { collection, getDocs, onSnapshot, query, orderBy, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import type { Dispatch } from '@reduxjs/toolkit';
+import { enqueueAction } from './syncSlice';
+import { processSyncQueue } from '../syncManager';
 
 // ── Types ──────────────────────────────────────────────
 export interface VideoGallery {
@@ -46,13 +48,22 @@ const initialState: VideosState = {
 
 export const updateGalleryVideos = createAsyncThunk(
     'videos/updateGalleryVideos',
-    async ({ galleryId, videos }: { galleryId: string; videos: Video[] }) => {
-        const ref = doc(db, 'videoGalleries', galleryId);
-        await updateDoc(ref, {
-            videos,
-            updatedAt: serverTimestamp(),
-        });
-        return { galleryId, videos };
+    async ({ galleryId, videos }: { galleryId: string; videos: Video[] }, { dispatch, rejectWithValue }) => {
+        try {
+            // Queue for offline sync
+            dispatch(enqueueAction({
+                id: `update_gallery_${galleryId}_${Date.now()}`,
+                actionType: 'UPDATE_GALLERY_VIDEOS',
+                payload: { galleryId, videos },
+                timestamp: Date.now(),
+            }));
+
+            // @ts-ignore
+            dispatch(processSyncQueue());
+            return { galleryId, videos };
+        } catch (e: any) {
+            return rejectWithValue(e.message);
+        }
     }
 );
 
