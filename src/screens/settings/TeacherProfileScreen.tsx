@@ -1,5 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert, Modal, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert, Modal, StatusBar, ActivityIndicator } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,12 +26,79 @@ export const ProfileScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
 
   const dispatch = useAppDispatch();
+  const user = useAppSelector((s: any) => s.auth.user);
+  const profileData = useAppSelector((s: any) => s.auth.profile);
   const [editModalVisible, setEditModalVisible] = React.useState(false);
   const [editName, setEditName] = React.useState('');
   const [editPhone, setEditPhone] = React.useState('');
   const [editQualification, setEditQualification] = React.useState('');
   const [editExperience, setEditExperience] = React.useState('');
   const [editImage, setEditImage] = React.useState<string | null>(null);
+
+  const [uploadingImage, setUploadingImage] = React.useState(false);
+  const [localImageUri, setLocalImageUri] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (user?.uid) {
+      AsyncStorage.getItem(`profile_picture_${user.uid}`).then(res => {
+        if (res) setLocalImageUri(res);
+      }).catch(() => {});
+    }
+  }, [user?.uid]);
+
+
+  
+  const handleImagePick = async () => {
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (permissionResult.granted === false) {
+        Alert.alert('Permission Required', 'Permission to access camera roll is required!');
+        return;
+      }
+
+      const pickerResult = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!pickerResult.canceled && pickerResult.assets && pickerResult.assets.length > 0) {
+        setUploadingImage(true);
+        const asset = pickerResult.assets[0];
+        
+        const manipResult = await ImageManipulator.manipulateAsync(
+          asset.uri,
+          [{ resize: { width: scale(300), height: scale(300) } }],
+          { compress: 0.5, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+        );
+
+        if (manipResult.base64 && user?.uid) {
+          const imageData = `data:image/jpeg;base64,${manipResult.base64}`;
+          await AsyncStorage.setItem(`profile_picture_${user.uid}`, imageData);
+          setLocalImageUri(imageData);
+          if (profileData) {
+            dispatch(setProfile({ ...profileData, image: imageData }));
+            dispatch(enqueueAction({
+              id: Date.now().toString(),
+              actionType: 'UPDATE_PROFILE',
+              payload: { uid: profileData.uid || profileData.id, payload: { ...profileData, image: imageData } },
+              timestamp: Date.now(),
+            }));
+            dispatch(processSyncQueue());
+          }
+          Alert.alert('Success', 'Profile picture saved locally in cache!');
+        } else {
+          Alert.alert('Error', 'Could not process image.');
+        }
+      }
+    } catch (error) {
+      console.error('Image pick/upload error:', error);
+      Alert.alert('Error', 'Failed to update profile picture. Please try again.');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   const openEditModal = () => {
     setEditName(displayName);
@@ -95,8 +165,6 @@ export const ProfileScreen: React.FC = () => {
   };
 
   
-  const profileData = useAppSelector((s: any) => s.auth.profile);
-  const user = useAppSelector((s: any) => s.auth.user);
   const teachersList = useAppSelector((s: any) => s.teachers?.list || []);
 
   const currentTeacher = React.useMemo(() => {
@@ -112,7 +180,7 @@ export const ProfileScreen: React.FC = () => {
   const displayQualification = profileData?.qualification || currentTeacher?.qualification || 'N/A';
   const displayExperience = profileData?.experience || currentTeacher?.experience || 'N/A';
   const displayPhone = profileData?.phone || currentTeacher?.phone || 'N/A';
-  const displayImage = profileData?.image?.trim() ? profileData.image : currentTeacher?.image?.trim() ? currentTeacher.image : user?.photoURL?.trim() ? user.photoURL : null;
+  const displayImage = localImageUri || (profileData?.image?.trim() ? profileData.image : currentTeacher?.image?.trim() ? currentTeacher.image : user?.photoURL?.trim() ? user.photoURL : null);
 
   const confirmLogout = async () => {
     setLogoutModalVisible(false);
@@ -171,13 +239,27 @@ export const ProfileScreen: React.FC = () => {
         {/* Profile Card & Header */}
         <TeacherProfileBanner />
           <View style={styles.avatarSection}>
-          <View style={[styles.avatarContainer, { borderColor: theme.background }]}>
-            <Image
-              source={displayImage ? { uri: displayImage } : require('../../../assets/icon.png')}
-              style={styles.avatar}
-              defaultSource={require('../../../assets/icon.png')}
-            />
-          </View>
+          <TouchableOpacity 
+            style={[styles.avatarContainer, { borderColor: theme.background }]}
+            onPress={handleImagePick}
+            disabled={uploadingImage}
+            activeOpacity={0.7}
+          >
+            {uploadingImage ? (
+              <ActivityIndicator size="large" color={theme.primary} />
+            ) : (
+              <>
+                <Image
+                  source={displayImage ? { uri: displayImage } : require('../../../assets/icon.png')}
+                  style={styles.avatar}
+                  defaultSource={require('../../../assets/icon.png')}
+                />
+                <View style={{ position: 'absolute', bottom: 0, right: 0, backgroundColor: theme.primary, borderRadius: scale(15), width: scale(30), height: scale(30), justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: theme.background }}>
+                  <Ionicons name="camera" size={scale(16)} color="#fff" />
+                </View>
+              </>
+            )}
+          </TouchableOpacity>
           <Text style={[styles.name, { color: theme.text }]}>{displayName}</Text>
           <View style={[styles.roleBadge, { backgroundColor: theme.primary + '15' }]}>
             <Text style={[styles.roleText, { color: theme.primary }]}>{displayRole}</Text>

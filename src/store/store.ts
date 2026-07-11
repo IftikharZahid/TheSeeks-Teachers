@@ -6,6 +6,7 @@ import themeReducer from './slices/themeSlice';
 import coursesReducer from './slices/coursesSlice';
 import teachersReducer from './slices/teachersSlice';
 import notificationsReducer from './slices/notificationsSlice';
+import pushNotificationsReducer from '../features/notification/redux/pushNotificationsSlice';
 import videosReducer from './slices/videosSlice';
 import feeReducer from './slices/feeSlice';
 import resultsReducer from './slices/resultsSlice';
@@ -22,7 +23,7 @@ import syncReducer from './slices/syncSlice';
 const persistConfig = {
     key: 'root',
     storage: AsyncStorage,
-    whitelist: ['auth', 'videos', 'theme', 'admin', 'notifications', 'sync'], // Only persist these slices
+    whitelist: ['auth', 'videos', 'theme', 'admin', 'notifications', 'pushNotifications', 'sync'], // Only persist these slices
 };
 
 const rootReducer = combineReducers({
@@ -31,6 +32,7 @@ const rootReducer = combineReducers({
     courses: coursesReducer,
     teachers: teachersReducer,
     notifications: notificationsReducer,
+    pushNotifications: pushNotificationsReducer,
     videos: videosReducer,
     fee: feeReducer,
     results: resultsReducer,

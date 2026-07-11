@@ -19,6 +19,10 @@ import { initSyncListener } from './src/store/syncManager';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { Audio } from 'expo-av';
 
+// Notification Module
+import { initPushNotificationsListener } from './src/features/notification/redux/pushNotificationsSlice';
+import { registerForPushNotificationsAsync } from './src/features/notification/services/fcmService';
+
 /**
  * Inner component that has access to Redux dispatch
  * and initialises all Firebase listeners once on mount.
@@ -66,6 +70,10 @@ function AppContent() {
   useEffect(() => {
     if (user && user.uid) {
       const unsubLikedVideos = initLikedVideosListener(dispatch, user.uid);
+      
+      // Register for FCM Push Notifications with profile to compute topics
+      registerForPushNotificationsAsync(user.uid, profile);
+
       return () => {
         unsubLikedVideos();
       };
@@ -76,8 +84,10 @@ function AppContent() {
   useEffect(() => {
     if (profile) {
       const unsubMessages = initMessagesListener(dispatch, profile);
+      const unsubPushNotifications = initPushNotificationsListener(dispatch, profile);
       return () => {
         unsubMessages();
+        unsubPushNotifications();
       };
     }
   }, [dispatch, profile]);

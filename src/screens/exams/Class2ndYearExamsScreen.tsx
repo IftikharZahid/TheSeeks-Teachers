@@ -697,9 +697,21 @@ export const Class2ndYearExamsScreen: React.FC = () => {
         await dispatch(saveResult({ examData: { ...examData, id: (editingExam as any)?.id ? (editingExam as any).id : (Date.now().toString()) } })).unwrap();
         Alert.alert('Success', 'Exam record updated successfully');
       } else {
-        const newId = Date.now().toString();
-        await dispatch(saveResult({ examData: { ...examData, id: (editingExam as any)?.id ? (editingExam as any).id : (Date.now().toString()) } })).unwrap();
-        Alert.alert('Success', 'Exam record added successfully');
+        const existingExam = exams.find((e: any) => 
+          e.title === examData.title && 
+          e.bookName === examData.bookName && 
+          e.rollNo === examData.rollNo && 
+          e.studentClass === examData.studentClass
+        );
+
+        if (existingExam && existingExam.id) {
+          await dispatch(saveResult({ examData: { ...examData, id: existingExam.id } })).unwrap();
+          Alert.alert('Success', 'Exam record replaced successfully');
+        } else {
+          const newId = Date.now().toString();
+          await dispatch(saveResult({ examData: { ...examData, id: newId } })).unwrap();
+          Alert.alert('Success', 'Exam record added successfully');
+        }
       }
       setModalVisible(false);
       resetForm();

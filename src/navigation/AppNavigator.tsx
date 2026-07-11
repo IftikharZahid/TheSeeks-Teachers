@@ -52,6 +52,11 @@ import { StaffInfoScreen } from "../screens/users/TeacherDetailsScreen";
 import { DiaryScreen } from "../screens/diary/ClassListDiaryScreen";
 import { ClassDiaryScreen } from "../screens/diary/ClassDiaryScreen";
 
+// Push Notification Module
+import { NotificationCenterScreen } from "../features/notification/screens/NotificationCenterScreen";
+import { NotificationDetailsScreen } from "../features/notification/screens/NotificationDetailsScreen";
+import { NotificationPopup } from "../features/notification/components/NotificationPopup";
+
 export type RootStackParamList = {
   Welcome: undefined;
   Login: undefined;
@@ -92,6 +97,8 @@ export type RootStackParamList = {
   StaffInfoScreen: { teacher: any };
   DiaryScreen: undefined;
   ClassDiaryScreen: { selectedClass: string };
+  NotificationCenterScreen: undefined;
+  NotificationDetailsScreen: { notification: any };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -187,9 +194,14 @@ export const AppNavigator: React.FC = () => {
               <Stack.Screen name="StaffInfoScreen" component={StaffInfoScreen} />
               <Stack.Screen name="DiaryScreen" component={DiaryScreen} />
               <Stack.Screen name="ClassDiaryScreen" component={ClassDiaryScreen} />
+
+              {/* Notification Module Screens */}
+              <Stack.Screen name="NotificationCenterScreen" component={NotificationCenterScreen} />
+              <Stack.Screen name="NotificationDetailsScreen" component={NotificationDetailsScreen} />
             </>
           )}
         </Stack.Navigator>
+        {user && <NotificationPopup />}
       </NavigationContainer>
     </View>
   );
