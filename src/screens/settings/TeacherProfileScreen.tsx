@@ -29,6 +29,7 @@ export const ProfileScreen: React.FC = () => {
   const user = useAppSelector((s: any) => s.auth.user);
   const profileData = useAppSelector((s: any) => s.auth.profile);
   const [editModalVisible, setEditModalVisible] = React.useState(false);
+  const [editingField, setEditingField] = React.useState<string | null>(null);
   const [editName, setEditName] = React.useState('');
   const [editPhone, setEditPhone] = React.useState('');
   const [editQualification, setEditQualification] = React.useState('');
@@ -82,7 +83,7 @@ export const ProfileScreen: React.FC = () => {
             dispatch(enqueueAction({
               id: Date.now().toString(),
               actionType: 'UPDATE_PROFILE',
-              payload: { uid: profileData.uid || profileData.id, payload: { ...profileData, image: imageData } },
+              payload: { uid: user?.uid || profileData?.uid || profileData?.id, payload: { ...profileData, image: imageData } },
               timestamp: Date.now(),
             }));
             dispatch(processSyncQueue());
@@ -100,28 +101,40 @@ export const ProfileScreen: React.FC = () => {
     }
   };
 
-  const openEditModal = () => {
+  const openSpecificEdit = (field: string | null = null) => {
     setEditName(displayName);
     setEditPhone(displayPhone !== 'N/A' ? displayPhone : '');
     setEditQualification(displayQualification !== 'N/A' ? displayQualification : '');
     setEditExperience(displayExperience !== 'N/A' ? displayExperience : '');
     setEditImage(displayImage);
     setEditModalVisible(true);
-  };
+    setEditingField(field);
+};
 
-  const pickImage = async () => {
+    const pickImage = async () => {
     try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: 'image/*',
-        copyToCacheDirectory: true,
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (permissionResult.granted === false) {
+        Alert.alert('Permission Required', 'Permission to access camera roll is required!');
+        return;
+      }
+      const pickerResult = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
       });
-      if (result.canceled === false && result.assets && result.assets.length > 0) {
-        const fileUri = result.assets[0].uri;
-        // Convert to base64 so we can upload it to Firestore
-        const base64Data = await FileSystem.readAsStringAsync(fileUri, { encoding: 'base64' });
-        const mimeType = result.assets[0].mimeType || 'image/jpeg';
-        const imageStr = `data:${mimeType};base64,${base64Data}`;
-        setEditImage(imageStr);
+      if (!pickerResult.canceled && pickerResult.assets && pickerResult.assets.length > 0) {
+        const asset = pickerResult.assets[0];
+        const manipResult = await ImageManipulator.manipulateAsync(
+          asset.uri,
+          [{ resize: { width: scale(300), height: scale(300) } }],
+          { compress: 0.5, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+        );
+        if (manipResult.base64) {
+          const imageStr = `data:image/jpeg;base64,${manipResult.base64}`;
+          setEditImage(imageStr);
+        }
       }
     } catch (e) {
       console.warn('Image pick error:', e);
@@ -154,7 +167,7 @@ export const ProfileScreen: React.FC = () => {
     dispatch(enqueueAction({
       id: `update_profile_${Date.now()}`,
       actionType: 'UPDATE_PROFILE',
-      payload: { uid: profileData.uid || profileData.id, payload: payloadForSync },
+      payload: { uid: user?.uid || profileData?.uid || profileData?.id, payload: payloadForSync },
       timestamp: Date.now(),
     }));
 
@@ -226,9 +239,6 @@ export const ProfileScreen: React.FC = () => {
       </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: '#fff' }]} numberOfLines={1} adjustsFontSizeToFit>My Profile</Text>
         <View style={{ flexDirection: 'row', gap: scale(8) }}>
-          <TouchableOpacity style={[styles.backButton, { backgroundColor: 'rgba(255,255,255,0.2)' }]} onPress={openEditModal}>
-            <Ionicons name="pencil" size={scale(18)} color="#fff" />
-          </TouchableOpacity>
           <TouchableOpacity style={[styles.backButton, { backgroundColor: 'rgba(255,255,255,0.2)' }]} onPress={() => setLogoutModalVisible(true)}>
             <Ionicons name="log-out-outline" size={scale(20)} color="#fff" />
           </TouchableOpacity>
@@ -272,9 +282,9 @@ export const ProfileScreen: React.FC = () => {
           <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
             <InfoRow icon="school-outline" iconColor="#0284c7" label="Subject" value={displaySubject} theme={theme} />
             <View style={[styles.divider, { backgroundColor: theme.border }]} />
-            <InfoRow icon="ribbon-outline" iconColor="#db2777" label="Qualification" value={displayQualification} theme={theme} />
+            <InfoRow icon="ribbon-outline" iconColor="#db2777" label="Qualification" value={displayQualification} theme={theme} onEdit={() => openSpecificEdit('qualification')} />
             <View style={[styles.divider, { backgroundColor: theme.border }]} />
-            <InfoRow icon="calendar-outline" iconColor="#7c3aed" label="Experience" value={displayExperience} theme={theme} />
+            <InfoRow icon="calendar-outline" iconColor="#7c3aed" label="Experience" value={displayExperience} theme={theme} onEdit={() => openSpecificEdit('experience')} />
           </View>
         </View>
 
@@ -283,7 +293,7 @@ export const ProfileScreen: React.FC = () => {
           <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
             <InfoRow icon="mail-outline" iconColor="#059669" label="Email" value={displayEmail} theme={theme} />
             <View style={[styles.divider, { backgroundColor: theme.border }]} />
-            <InfoRow icon="call-outline" iconColor="#ea580c" label="Phone" value={displayPhone} theme={theme} />
+            <InfoRow icon="call-outline" iconColor="#ea580c" label="Phone" value={displayPhone} theme={theme} onEdit={() => openSpecificEdit('phone')} />
           </View>
         </View>
       </ScrollView>
@@ -333,7 +343,7 @@ export const ProfileScreen: React.FC = () => {
             <Text style={[styles.modalTitle, { color: theme.text }]}>Edit Profile</Text>
             <ScrollView style={{ width: '100%', maxHeight: scale(400) }} showsVerticalScrollIndicator={false}>
               
-              <TouchableOpacity onPress={pickImage} style={{ alignSelf: 'center', marginVertical: scale(10) }}>
+              {(!editingField || editingField === 'image') && (<TouchableOpacity onPress={pickImage} style={{ alignSelf: 'center', marginVertical: scale(10) }}>
                 <Image
                   source={editImage ? { uri: editImage } : require('../../../assets/icon.png')}
                   style={{ width: scale(80), height: scale(80), borderRadius: scale(40), backgroundColor: '#eee' }}
@@ -341,44 +351,60 @@ export const ProfileScreen: React.FC = () => {
                 <View style={{ position: 'absolute', bottom: 0, right: 0, backgroundColor: theme.primary, borderRadius: scale(12), padding: scale(4) }}>
                   <Ionicons name="camera" size={scale(16)} color="#fff" />
                 </View>
-              </TouchableOpacity>
+              </TouchableOpacity>)}
 
-              <Text style={{ color: theme.textSecondary, fontSize: scale(12), marginBottom: scale(4) }}>Full Name</Text>
-              <TextInput
-                style={{ backgroundColor: theme.backgroundSecondary, color: theme.text, borderRadius: scale(8), padding: scale(10), marginBottom: scale(12) }}
-                value={editName}
-                onChangeText={setEditName}
-                placeholder="Full Name"
-                placeholderTextColor={theme.textTertiary}
-              />
+              {(!editingField || editingField === 'name') && (
+                <React.Fragment>
+                  <Text style={{ color: theme.textSecondary, fontSize: scale(12), marginBottom: scale(4) }}>Full Name</Text>
+                  <TextInput
+                    style={{ backgroundColor: theme.backgroundSecondary, color: theme.text, borderRadius: scale(8), padding: scale(10), marginBottom: scale(12) }}
+                    value={editName}
+                    onChangeText={setEditName}
+                    placeholder="Full Name"
+                    placeholderTextColor={theme.textTertiary}
+                  />
+                </React.Fragment>
+              )}
 
-              <Text style={{ color: theme.textSecondary, fontSize: scale(12), marginBottom: scale(4) }}>Phone Number</Text>
-              <TextInput
-                style={{ backgroundColor: theme.backgroundSecondary, color: theme.text, borderRadius: scale(8), padding: scale(10), marginBottom: scale(12) }}
-                value={editPhone}
-                onChangeText={setEditPhone}
-                placeholder="Phone Number"
-                keyboardType="phone-pad"
-                placeholderTextColor={theme.textTertiary}
-              />
+              {(!editingField || editingField === 'phone') && (
+                <React.Fragment>
+                  <Text style={{ color: theme.textSecondary, fontSize: scale(12), marginBottom: scale(4) }}>Phone Number</Text>
+                  <TextInput
+                    style={{ backgroundColor: theme.backgroundSecondary, color: theme.text, borderRadius: scale(8), padding: scale(10), marginBottom: scale(12) }}
+                    value={editPhone}
+                    onChangeText={setEditPhone}
+                    placeholder="Phone Number"
+                    keyboardType="phone-pad"
+                    placeholderTextColor={theme.textTertiary}
+                  />
+                </React.Fragment>
+              )}
 
-              <Text style={{ color: theme.textSecondary, fontSize: scale(12), marginBottom: scale(4) }}>Qualification</Text>
-              <TextInput
-                style={{ backgroundColor: theme.backgroundSecondary, color: theme.text, borderRadius: scale(8), padding: scale(10), marginBottom: scale(12) }}
-                value={editQualification}
-                onChangeText={setEditQualification}
-                placeholder="e.g., M.Sc Mathematics"
-                placeholderTextColor={theme.textTertiary}
-              />
+              {(!editingField || editingField === 'qualification') && (
+                <React.Fragment>
+                  <Text style={{ color: theme.textSecondary, fontSize: scale(12), marginBottom: scale(4) }}>Qualification</Text>
+                  <TextInput
+                    style={{ backgroundColor: theme.backgroundSecondary, color: theme.text, borderRadius: scale(8), padding: scale(10), marginBottom: scale(12) }}
+                    value={editQualification}
+                    onChangeText={setEditQualification}
+                    placeholder="e.g., M.Sc Mathematics"
+                    placeholderTextColor={theme.textTertiary}
+                  />
+                </React.Fragment>
+              )}
 
-              <Text style={{ color: theme.textSecondary, fontSize: scale(12), marginBottom: scale(4) }}>Experience</Text>
-              <TextInput
-                style={{ backgroundColor: theme.backgroundSecondary, color: theme.text, borderRadius: scale(8), padding: scale(10), marginBottom: scale(20) }}
-                value={editExperience}
-                onChangeText={setEditExperience}
-                placeholder="e.g., 5 Years"
-                placeholderTextColor={theme.textTertiary}
-              />
+              {(!editingField || editingField === 'experience') && (
+                <React.Fragment>
+                  <Text style={{ color: theme.textSecondary, fontSize: scale(12), marginBottom: scale(4) }}>Experience</Text>
+                  <TextInput
+                    style={{ backgroundColor: theme.backgroundSecondary, color: theme.text, borderRadius: scale(8), padding: scale(10), marginBottom: scale(20) }}
+                    value={editExperience}
+                    onChangeText={setEditExperience}
+                    placeholder="e.g., 5 Years"
+                    placeholderTextColor={theme.textTertiary}
+                  />
+                </React.Fragment>
+              )}
             </ScrollView>
 
             <View style={styles.modalActions}>
@@ -404,14 +430,25 @@ export const ProfileScreen: React.FC = () => {
   );
 };
 
-const InfoRow = ({ icon, iconColor, label, value, theme }: any) => (
+const InfoRow = ({ icon, iconColor, label, value, theme, onEdit }: any) => (
   <View style={styles.infoRow}>
     <View style={[styles.iconWrap, { backgroundColor: iconColor + '15' }]}>
       <Ionicons name={icon} size={scale(16)} color={iconColor} />
     </View>
-    <View style={styles.infoTexts}>
-      <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>{label}</Text>
-      <Text style={[styles.infoValue, { color: theme.text }]}>{value}</Text>
+    <View style={[styles.infoTexts, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
+      <View style={{ flex: 1, paddingRight: scale(10) }}>
+        <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>{label}</Text>
+        <Text style={[styles.infoValue, { color: theme.text }]}>{value}</Text>
+      </View>
+      {onEdit && (
+        <TouchableOpacity 
+          onPress={onEdit}
+          style={{ width: scale(28), height: scale(28), borderRadius: scale(14), backgroundColor: theme.primary + '15', justifyContent: 'center', alignItems: 'center' }}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="pencil" size={scale(14)} color={theme.primary} />
+        </TouchableOpacity>
+      )}
     </View>
   </View>
 );

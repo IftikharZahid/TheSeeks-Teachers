@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, StatusBar } from 'react-native';
+import React, { useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, StatusBar, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,6 +14,57 @@ const CLASSES = [
   { id: '1st Year', name: '1st Year', icon: 'book-outline', color: '#8b5cf6', bg: '#f5f3ff' },
   { id: '2nd Year', name: '2nd Year', icon: 'library-outline', color: '#f59e0b', bg: '#fffbeb' },
 ];
+
+const AnimatedClassItem = ({ cls, index, theme, isDark, count, onSelect }: any) => {
+  const opacity = React.useRef(new Animated.Value(0)).current;
+  const translateY = React.useRef(new Animated.Value(50)).current;
+
+  React.useEffect(() => {
+    Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 500,
+        delay: index * 120,
+        useNativeDriver: true,
+      }),
+      Animated.spring(translateY, {
+        toValue: 0,
+        friction: 7,
+        tension: 40,
+        delay: index * 120,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View style={{ opacity, transform: [{ translateY }] }}>
+      <TouchableOpacity
+        style={[styles.card, { backgroundColor: theme.card, borderColor: isDark ? theme.border : '#f1f5f9' }]}
+        activeOpacity={0.7}
+        onPress={() => onSelect(cls.id)}
+      >
+        <View style={[styles.iconContainer, { backgroundColor: isDark ? cls.color + '20' : cls.bg }]}>
+          <Ionicons name={cls.icon} size={scale(24)} color={cls.color} />
+        </View>
+        
+        <View style={styles.cardContent}>
+          <Text style={[styles.cardTitle, { color: theme.text }]}>{cls.name}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: scale(2) }}>
+            <Ionicons name="people-outline" size={scale(12)} color={theme.textTertiary || '#94a3b8'} />
+            <Text style={[styles.studentCount, { color: theme.textTertiary || '#94a3b8' }]}> {count} {count === 1 ? 'Student' : 'Students'}</Text>
+          </View>
+        </View>
+
+        <View style={[styles.badge, { backgroundColor: isDark ? cls.color + '20' : cls.bg }]}>
+          <Text style={[styles.badgeText, { color: cls.color }]}>Manage Diary</Text>
+        </View>
+        
+        <Ionicons name="chevron-forward" size={scale(18)} color={theme.textTertiary || '#94a3b8'} style={{ marginLeft: scale(8) }} />
+      </TouchableOpacity>
+    </Animated.View>
+  );
+};
 
 export const DiaryScreen: React.FC = () => {
   const navigation = useNavigation<any>();

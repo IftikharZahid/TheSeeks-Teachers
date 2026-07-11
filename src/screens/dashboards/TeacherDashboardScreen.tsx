@@ -18,7 +18,7 @@ import {
   initStudentsListener,
   initExamSettingsListener,
 } from "../../store/slices/adminSlice";
-import { selectUnreadMessagesCount, loadLastReadTimestamp, initMessagesListener } from '../../store/slices/messagesSlice';
+import { selectUnreadMessagesCount, loadLastReadTimestamp, initMessagesListener, GROUPS } from '../../store/slices/messagesSlice';
 import { fetchTeacherAssignments } from '../../store/slices/assignmentsSlice';
 import { initAppSettingsListener } from '../../store/slices/appSettingsSlice';
 import { initNotificationsListener } from '../../store/slices/notificationsSlice';
@@ -244,6 +244,32 @@ export const TeacherDashboardScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const unsubsRef = useRef<(() => void)[]>([]);
   const [showSideMenu, setShowSideMenu] = useState(false);
+
+  const messagesList = useAppSelector(state => state.messages.list);
+  const noticesList = useAppSelector(state => state.notifications.notices);
+
+  const recentUpdates: any[] = [];
+  const getNoticeTime = (n: any) => {
+    if (n.createdAt?.toMillis) return n.createdAt.toMillis();
+    if (n.createdAt?.seconds) return n.createdAt.seconds * 1000;
+    return 0;
+  };
+  
+  if (noticesList && noticesList.length > 0) {
+    noticesList.forEach((n: any) => {
+      recentUpdates.push({ id: `notice-${n.id}`, type: 'notice', item: n, timeMs: getNoticeTime(n) });
+    });
+  }
+  if (messagesList && messagesList.length > 0) {
+    messagesList.forEach((m: any) => {
+      recentUpdates.push({ id: `msg-${m.id}`, type: 'message', item: m, timeMs: (m as any).createdAtMs || 0 });
+    });
+  }
+  
+  recentUpdates.sort((a, b) => b.timeMs - a.timeMs);
+  const topUpdates = recentUpdates.slice(0, 4);
+  const [showDropdown, setShowDropdown] = useState(false);
+
   
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -449,7 +475,7 @@ export const TeacherDashboardScreen: React.FC = () => {
             bellSoundRef.current = null;
           }
           const { sound } = await Audio.Sound.createAsync(
-            require('../../assets/bell.wav')
+            require('../../assets/Bell.mp3')
           );
           bellSoundRef.current = sound;
           await sound.playAsync();
@@ -554,7 +580,7 @@ export const TeacherDashboardScreen: React.FC = () => {
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={() => handleNavigate('LibraryScreen')}
+              onPress={() => setShowDropdown(!showDropdown)}
               style={styles.headerIconBtnTransparent}
             >
               <Ionicons name="notifications-outline" size={scale(24)} color="#fff" />
@@ -568,19 +594,29 @@ export const TeacherDashboardScreen: React.FC = () => {
 
           
       {/* Notifications Dropdown Overlay */}
-      <Modal visible={showDropdown} transparent animationType="fade" onRequestClose={() => setShowDropdown(false)}>
-        <TouchableWithoutFeedback onPress={() => setShowDropdown(false)}>
-          <View style={styles.dropdownOverlay}>
-            <TouchableWithoutFeedback>
-              <View style={[styles.dropdownContainer, { backgroundColor: theme.card, borderColor: theme.border }]}>
-                <View style={[styles.dropdownHeader, { borderBottomColor: theme.border }]}>
-                  <Text style={[styles.dropdownTitle, { color: theme.text }]}>Recent Updates</Text>
-                  <TouchableOpacity onPress={() => { setShowDropdown(false); navigation.navigate('Home' as never, { screen: 'LibraryScreen' } as never) }}>
-                    <Text style={[styles.viewAllText, { color: theme.primary }]}>View All</Text>
-                  </TouchableOpacity>
-                </View>
+      <Modal
+        visible={showDropdown}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowDropdown(false)}
+        statusBarTranslucent={true}
+      >
+        <TouchableOpacity
+          style={styles.dropdownOverlay}
+          activeOpacity={1}
+          onPress={() => setShowDropdown(false)}
+        >
+          <View style={[styles.dropdownWrapper, { top: (StatusBar.currentHeight || insets.top || 24) + scale(45), right: scale(16) }]}>
+            {/* Caret pointing up */}
+            <View style={[styles.caret, { borderBottomColor: theme.border }]} />
+            <View style={[styles.caretInner, { borderBottomColor: theme.card }]} />
 
-                {/* Dynamic Updates List */}
+            <View style={[styles.dropdownContainer, { backgroundColor: theme.card, borderColor: theme.border }]}>
+              <View style={[styles.dropdownHeader, { borderBottomColor: theme.border }]}>
+                <Text style={[styles.dropdownTitle, { color: theme.text }]}>Recent Updates</Text>
+              </View>
+
+              <ScrollView style={{ maxHeight: scale(300), flexGrow: 0 }} showsVerticalScrollIndicator={false}>
                 {topUpdates.length > 0 ? (
                   topUpdates.map(update => {
                     if (update.type === 'notice') {
@@ -589,11 +625,11 @@ export const TeacherDashboardScreen: React.FC = () => {
                         <TouchableOpacity
                           key={update.id}
                           style={[styles.dropdownItem, { borderBottomColor: theme.border }]}
-                          onPress={() => { setShowDropdown(false); navigation.navigate('Home' as never, { screen: 'LibraryScreen', params: { noticeId: n.id } } as never) }}
+                          onPress={() => { setShowDropdown(false); navigation.navigate('LibraryScreen', { noticeId: n.id } as any) }}
                           activeOpacity={0.7}
                         >
-                          <View style={[styles.iconBox, { backgroundColor: n.iconBgColor || 'rgba(139,92,246,0.1)' }]}>
-                            <Ionicons name={(n.iconName as any) || 'notifications'} size={18} color={n.iconColor || theme.primary} />
+                          <View style={[styles.iconBox, { backgroundColor: isDark ? '#334155' : '#f1f5f9' }]}>
+                            <Ionicons name="megaphone-outline" size={scale(16)} color={theme.primary} />
                           </View>
                           <View style={styles.dropdownContent}>
                             <View style={styles.itemTitleRow}>
@@ -606,22 +642,26 @@ export const TeacherDashboardScreen: React.FC = () => {
                       );
                     } else {
                       const m = update.item;
+                      const groupName = GROUPS.find(g => g.id === m.groupId)?.name || 'Message';
                       return (
                         <TouchableOpacity
                           key={update.id}
                           style={[styles.dropdownItem, { borderBottomColor: theme.border }]}
-                          onPress={() => { setShowDropdown(false); navigation.navigate('Home' as never, { screen: 'MessagesScreen', params: { groupId: m.groupId } } as never) }}
+                          onPress={() => { setShowDropdown(false); navigation.navigate('MessagesScreen', { groupId: m.groupId } as any) }}
                           activeOpacity={0.7}
                         >
-                          <View style={[styles.iconBox, { backgroundColor: 'rgba(6,182,212,0.1)' }]}>
-                            <Ionicons name="chatbubbles" size={18} color={theme.accent} />
+                          <View style={[styles.iconBox, { backgroundColor: isDark ? '#334155' : '#f1f5f9' }]}>
+                            <Ionicons name="chatbubbles-outline" size={scale(16)} color={theme.primary} />
                           </View>
                           <View style={styles.dropdownContent}>
                             <View style={styles.itemTitleRow}>
-                              <Text style={[styles.itemTitle, { color: theme.text }]} numberOfLines={1}>{m.sender}</Text>
+                              <Text style={[styles.itemTitle, { color: theme.text }]} numberOfLines={1}>{groupName}</Text>
                               <Text style={[styles.itemTime, { color: theme.textTertiary }]}>{formatRelativeTime(update.timeMs)}</Text>
                             </View>
-                            <Text style={[styles.itemText, { color: theme.textSecondary }]} numberOfLines={1}>{m.text}</Text>
+                            <Text style={[styles.itemText, { color: theme.textSecondary }]} numberOfLines={2}>
+                              <Text style={{fontWeight: '700', color: theme.text}}>{m.senderName}: </Text>
+                              {m.text}
+                            </Text>
                           </View>
                         </TouchableOpacity>
                       );
@@ -633,10 +673,10 @@ export const TeacherDashboardScreen: React.FC = () => {
                     <Text style={{ color: theme.textSecondary, marginTop: 8 }}>No recent updates</Text>
                   </View>
                 )}
-              </View>
-            </TouchableWithoutFeedback>
+              </ScrollView>
+            </View>
           </View>
-        </TouchableWithoutFeedback>
+        </TouchableOpacity>
       </Modal>
 
           {/* ─── Professional Side Drawer ─── */}
@@ -1304,15 +1344,15 @@ export const TeacherDashboardScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
 
-  dropdownOverlay: {
+  notifDropdownOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.3)',
   },
-  dropdownContainer: {
+  notifDropdownContainer: {
     position: 'absolute',
     top: scale(70), // Below header
     right: scale(16),
-    width: Math.min(width * 0.85, 340),
+    width: '100%',
     borderRadius: scale(16),
     borderWidth: 1,
     shadowColor: '#000',
@@ -1322,7 +1362,7 @@ const styles = StyleSheet.create({
     elevation: 20,
     overflow: 'hidden',
   },
-  dropdownHeader: {
+  notifDropdownHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -1330,19 +1370,122 @@ const styles = StyleSheet.create({
     paddingVertical: scale(14),
     borderBottomWidth: 1,
   },
-  dropdownTitle: {
+  notifDropdownTitle: {
     fontSize: scale(16),
     fontWeight: '700',
   },
-  viewAllText: {
+  notifViewAllText: {
     fontSize: scale(13),
+    fontWeight: '600',
+  },
+  notifDropdownItem: {
+    flexDirection: 'row',
+    paddingVertical: scale(12),
+    paddingHorizontal: scale(14),
+    borderBottomWidth: 1,
+    alignItems: 'center',
+  },
+  notifIconBox: {
+    width: scale(36),
+    height: scale(36),
+    borderRadius: scale(18),
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: scale(12),
+  },
+  notifDropdownContent: {
+    flex: 1,
+  },
+  notifItemTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  notifItemTitle: {
+    fontSize: scale(14),
+    fontWeight: '700',
+    flex: 1,
+    marginRight: 8,
+  },
+  notifItemTime: {
+    fontSize: scale(11),
+  },
+  notifItemText: {
+    fontSize: scale(13),
+    lineHeight: scale(18),
+  },
+
+
+  dropdownOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+  },
+  dropdownWrapper: {
+    position: 'absolute',
+    alignItems: 'flex-end',
+    width: scale(250),
+  },
+  caret: {
+    width: 0,
+    height: 0,
+    backgroundColor: 'transparent',
+    borderStyle: 'solid',
+    borderLeftWidth: scale(8),
+    borderRightWidth: scale(8),
+    borderBottomWidth: scale(8),
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    marginRight: scale(10),
+  },
+  caretInner: {
+    width: 0,
+    height: 0,
+    backgroundColor: 'transparent',
+    borderStyle: 'solid',
+    borderLeftWidth: scale(7),
+    borderRightWidth: scale(7),
+    borderBottomWidth: scale(7),
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    marginRight: scale(11),
+    position: 'absolute',
+    top: scale(1.5),
+    zIndex: 2,
+  },
+  dropdownContainer: {
+    width: '100%',
+    borderRadius: scale(12),
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: scale(4) },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 8,
+    overflow: 'hidden',
+  },
+  dropdownHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: scale(16),
+    paddingVertical: scale(10),
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  dropdownTitle: {
+    fontSize: scale(13),
+    fontWeight: '700',
+  },
+  viewAllText: {
+    fontSize: scale(11),
     fontWeight: '600',
   },
   dropdownItem: {
     flexDirection: 'row',
-    padding: scale(16),
-    borderBottomWidth: 1,
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    paddingVertical: scale(12),
+    paddingHorizontal: scale(14),
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   iconBox: {
     width: scale(36),
@@ -1351,6 +1494,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: scale(12),
+    marginTop: scale(2),
   },
   dropdownContent: {
     flex: 1,
@@ -1359,20 +1503,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   itemTitle: {
-    fontSize: scale(14),
-    fontWeight: '700',
+    fontSize: scale(12),
+    fontWeight: '600',
     flex: 1,
-    marginRight: 8,
+    marginRight: scale(6),
   },
   itemTime: {
-    fontSize: scale(11),
+    fontSize: scale(9),
+    fontWeight: '500',
   },
   itemText: {
-    fontSize: scale(13),
-    lineHeight: scale(18),
+    fontSize: scale(11),
   },
 
   container: { flex: 1, paddingTop: StatusBar.currentHeight || 0 },
@@ -1599,7 +1743,7 @@ const styles = StyleSheet.create({
     zIndex: 200,
     paddingVertical: scale(4),
   },
-  dropdownItem: {
+  dropdownItem2: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: scale(10),

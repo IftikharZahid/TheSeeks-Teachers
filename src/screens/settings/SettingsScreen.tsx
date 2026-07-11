@@ -141,7 +141,7 @@ export const SettingsScreen: React.FC = () => {
                   icon={item.icon}
                   iconColor={item.color}
                   title={item.title}
-                  onPress={(item as any).screen ? () => navigation.navigate((item as any).screen as never) : () => setComingSoonModalVisible(true)}
+                  onPress={(item as any).screen ? () => navigation.navigate((item as any).screen as any, { fromSettings: true }) : () => setComingSoonModalVisible(true)}
                 />
               </React.Fragment>
             ))}
@@ -177,7 +177,7 @@ export const SettingsScreen: React.FC = () => {
                   icon={item.icon}
                   iconColor={item.color}
                   title={item.title}
-                  onPress={item.screen ? () => navigation.navigate(item.screen as never) : () => setComingSoonModalVisible(true)}
+                  onPress={item.screen ? () => navigation.navigate(item.screen as any, { fromSettings: true }) : () => setComingSoonModalVisible(true)}
                 />
               </React.Fragment>
             ))}

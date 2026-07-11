@@ -98,7 +98,7 @@ export const TopHeader: React.FC = () => {
       }
 
       const { sound } = await Audio.Sound.createAsync(
-        require('../assets/bell.wav')
+        require('../assets/Bell.mp3')
       );
       soundRef.current = sound;
       await sound.playAsync();
